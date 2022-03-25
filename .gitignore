@@ -9,3 +9,21 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+
+# idea / Clion
+.idea
+cmake-build-*
+
+# python stuff
+*.pyc
+*.pyo
+__pycache__
+
+# C++ by-products
+*.o
+*.S
+
+# vim
+*.tmp
+*.swp
+*~
