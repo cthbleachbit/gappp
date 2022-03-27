@@ -1,3 +1,6 @@
 [submodule "fmt"]
 	path = fmt
 	url = https://github.com/fmtlib/fmt.git
+[submodule "dpdk"]
+	path = dpdk
+	url = https://github.com/DPDK/dpdk.git

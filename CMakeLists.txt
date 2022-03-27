@@ -14,6 +14,12 @@ set(CMAKE_INSTALL_RPATH ${INSTALL_LIB_DIR})
 # Load macro definitions
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cuda.cmake)
 
-# User options
+# CUDA
 set(GAPPP_CUDA_BINARIES_ARCH sm_60 sm_61 sm_62 sm_70 sm_72 sm_75 sm_80 sm_86 sm_87 CACHE STRING "CUDA architectures to build binaries for")
 find_package(CUDA)
+
+# DPDK
+set(RTE_SDK ${CMAKE_CURRENT_SOURCE_DIR}/dpdk CACHE STRING "DPDK SDK path")
+INCLUDE_DIRECTORIES(${RTE_SDK}/build/include)
+LINK_DIRECTORIES(${RTE_SDK}/build/lib)
+set(DPDK_LIBS "-Wl,--whole-archive -ldpdk -Wl,--no-whole-archive" CACHE STRING "DPDK linkage options")
