@@ -23,6 +23,7 @@ Inspired by [PacketShader](https://dl.acm.org/doi/10.1145/1851275.1851207), this
 
 # Building
 
+* On older Linux distros, you may want to define compiler version by exporting `CC=/path/to/gcc` and `CXX=/path/to/g++` before proceeding.
 * Make sure all submodules are up-to-date:
   - `git submodule update --init --recursive`
 * Build DPDK - get into `dpdk` first:
