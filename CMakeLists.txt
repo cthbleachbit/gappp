@@ -21,6 +21,8 @@ find_package(CUDA)
 # DPDK
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(DPDK REQUIRED libdpdk)
+set(DPDK_LIBS "${DPDK_LDFLAGS}")
+include_directories(${DPDK_INCLUDE_DIRS})
 
 # fmt
 find_package(fmt REQUIRED)
