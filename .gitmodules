@@ -4,3 +4,6 @@
 [submodule "dpdk"]
 	path = dpdk
 	url = https://github.com/DPDK/dpdk.git
+[submodule "cudart"]
+	path = cudart
+	url = https://gitlab.com/nvidia/headers/cuda-individual/cudart

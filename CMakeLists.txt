@@ -19,7 +19,10 @@ set(GAPPP_CUDA_BINARIES_ARCH sm_60 sm_61 sm_62 sm_70 sm_72 sm_75 sm_80 sm_86 sm_
 find_package(CUDA)
 
 # DPDK
-set(RTE_SDK ${CMAKE_CURRENT_SOURCE_DIR}/dpdk CACHE STRING "DPDK SDK path")
-INCLUDE_DIRECTORIES(${RTE_SDK}/build/include)
-LINK_DIRECTORIES(${RTE_SDK}/build/lib)
-set(DPDK_LIBS "-Wl,--whole-archive -ldpdk -Wl,--no-whole-archive" CACHE STRING "DPDK linkage options")
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(DPDK REQUIRED libdpdk)
+
+# fmt
+find_package(fmt REQUIRED)
+
+add_subdirectory(src)
