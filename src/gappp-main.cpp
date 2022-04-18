@@ -5,9 +5,30 @@
 #include <cstdint>
 #include <iostream>
 #include <fmt/format.h>
+#include <rte_acl_osdep.h>
+
+#include "Logging.h"
+
+/*
+ * Notes: DPDK parameters must be placed before program parameters
+ */
 
 int main(int argc, char **argv) {
-	uint8_t addr_bytes[6] = {1,2,3,4,5,6};
-	std::cout << fmt::format("{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}", addr_bytes[0], addr_bytes[1], addr_bytes[2], addr_bytes[3], addr_bytes[4], addr_bytes[5]) << std::endl;
+	int ret;
+
+	// Initialize EAL
+	ret = rte_eal_init(argc, argv);
+	if (ret < 0) {
+		GAPPP::whine(GAPPP::Severity::CRIT, "Invalid EAL parameters");
+		return 1;
+	}
+	argc -= ret;
+	argv += ret;
+
+	// TODO: Handle program options
+
+	// TODO: Create router instance
+
+	// TODO: Start event loop
 	return 0;
 }

@@ -11,6 +11,10 @@
 #define GAPPP_DEFAULT_TX_DESC 10
 // Number of receive descriptors
 #define GAPPP_DEFAULT_RX_DESC 10
+// Number of transmit queue
+#define GAPPP_DEFAULT_TX_QUEUE 1
+// Number of receive queue
+#define GAPPP_DEFAULT_RX_QUEUE 1
 // Socket ID
 #define GAPPP_DEFAULT_SOCKET_ID 0
 
@@ -54,7 +58,7 @@ namespace GAPPP {
 
 		local_port_conf.rx_adv_conf.rss_conf.rss_hf &= dev_info.flow_type_rss_offloads;
 
-		ret_val = rte_eth_dev_configure(port_id, 1, 1, &local_port_conf);
+		ret_val = rte_eth_dev_configure(port_id, GAPPP_DEFAULT_RX_QUEUE, GAPPP_DEFAULT_TX_QUEUE, &local_port_conf);
 		if (ret_val != 0)
 			throw std::runtime_error(fmt::format("port {}: configuration failed (res={})\n",
 			                                     port_id, ret_val));
@@ -97,6 +101,7 @@ namespace GAPPP {
 			throw std::runtime_error(fmt::format("Mac address get port {} failed (res={})", port_id, ret_val));
 
 		whine(Severity::INFO, fmt::format("Port {} MAC: {}", port_id, mac_addr_to_string(addr.addr_bytes)));
+		this->ports.emplace(port_id);
 		return true;
 	}
 } // GAPPP

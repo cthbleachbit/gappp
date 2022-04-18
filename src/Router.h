@@ -14,13 +14,14 @@
 #include <rte_dev.h>
 #include <rte_ethdev.h>
 
-#include <memory>
+#include <unordered_set>
 
 namespace GAPPP {
 
 	class Router {
 	protected:
-		std::unique_ptr<struct rte_eth_dev[]> nic_list;
+		// Set of ports. Use rte_eth_dev_info_get to obtain rte_eth_dev_info
+		std::unordered_set<uint16_t> ports;
 	public:
 		Router() = default;
 		/**
