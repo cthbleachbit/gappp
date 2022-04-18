@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <iostream>
 #include <fmt/format.h>
-#include <rte_acl_osdep.h>
+#include <rte_eal.h>
 
 #include "Logging.h"
 
