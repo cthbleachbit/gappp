@@ -11,6 +11,8 @@
 
 /*
  * Notes: DPDK parameters must be placed before program parameters
+ *
+ * Hugepages of size 1GiB must be allocated before starting the program
  */
 
 int main(int argc, char **argv) {
