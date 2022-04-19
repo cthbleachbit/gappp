@@ -1,3 +1,4 @@
+# Macro copied from blender
 macro(GAPPP_CUDA_KERNEL_ADD arch prev_arch name flags sources)
 	if(${arch} MATCHES "compute_.*")
 		set(format "ptx")
@@ -21,7 +22,7 @@ macro(GAPPP_CUDA_KERNEL_ADD arch prev_arch name flags sources)
 		--use_fast_math
 		-o ${CMAKE_CURRENT_BINARY_DIR}/${cuda_file})
 
-	if(WITH_CYCLES_CUBIN_COMPILER)
+	if(WITH_GAPPP_CUBIN_COMPILER)
 		string(SUBSTRING ${arch} 3 -1 CUDA_ARCH)
 
 		# Needed to find libnvrtc-builtins.so. Can't do it from inside
@@ -51,7 +52,7 @@ macro(GAPPP_CUDA_KERNEL_ADD arch prev_arch name flags sources)
 			${cuda_flags}
 			DEPENDS ${kernel_sources})
 	endif()
-	install("${CMAKE_CURRENT_BINARY_DIR}" "${cuda_file}" ${INSTALL_LIB_DIR})
+	install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${cuda_file}" RUNTIME DESTINATION ${INSTALL_LIB_DIR})
 	list(APPEND cuda_cubins ${cuda_file})
 endmacro()
 

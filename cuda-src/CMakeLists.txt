@@ -1,0 +1,1 @@
+GAPPP_CUDA_KERNEL_ADD(sm_87 none l3fwd-cubin "" l3fwd.cpp)
