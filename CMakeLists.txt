@@ -11,6 +11,8 @@ set(INSTALL_LIB_DIR ${CMAKE_INSTALL_PREFIX}/lib CACHE PATH "Installation directo
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 set(CMAKE_INSTALL_RPATH ${INSTALL_LIB_DIR})
 
+set_property(GLOBAL PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 # Load macro definitions
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cuda.cmake)
 
@@ -25,6 +27,14 @@ set(DPDK_LIBS "${DPDK_LDFLAGS}")
 include_directories(${DPDK_INCLUDE_DIRS})
 
 # fmt
-find_package(fmt REQUIRED)
+option(GAPPP_USE_SYSTEM_FMT "Use system fmtlib" ON)
+if (GAPPP_USE_SYSTEM_FMT)
+	find_package(fmt REQUIRED)
+	set(fmt_LIBS fmt::fmt)
+else()
+	set(FMT_DEBUG_POSTFIX "")
+	add_subdirectory(fmt)
+	set(fmt_LIBS fmt::fmt-header-only)
+endif()
 
 add_subdirectory(src)
