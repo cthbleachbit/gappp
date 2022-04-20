@@ -34,9 +34,10 @@ Inspired by [PacketShader](https://dl.acm.org/doi/10.1145/1851275.1851207), this
 # Command line arguments
 
 ### Parameters accepted
-- `-w bus:dev.func` PCIe device address of the NIC to take over
-- `--gappp:ip a.b.c.d/cidr` Assign this IP address to the card
-- `--gappp:route routing_table_file` Load routing table from file
+- EAL parameter: `-w bus:dev.func` PCIe device address of the NIC to take over
+- Use `--` to separate DPDK EAL options from program specific options
+- `--ip a.b.c.d/cidr` Assign this IP address to the card
+- `--route routing_table_file` Load routing table from file
 
 ### Routing table format:
 - `a.b.c.d/cidr (via <gateway>) dev <port_id>`
@@ -50,6 +51,4 @@ Looks like this:
 192.168.1.0/24 dev 1
 ```
 
-### Testing on testbeds
-
-Use `sudo ./gappp -w 41:00.0`
+To test on testbeds, use something like `sudo ./gappp -w 41:00.0 -- --ip 10.0.0.1/24 --route simple-routes`
