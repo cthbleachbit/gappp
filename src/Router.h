@@ -28,7 +28,7 @@ namespace GAPPP {
 		 * initialize an ethernet device
 		 * @param port_id       Port ID to set up
 		 * @param mem_buf_pool  memory buffer to setup
-		 * @return
+		 * @return true if the device is initialized successfully and registered in the ports array
 		 */
 		bool dev_probe(uint16_t port_id, struct rte_mempool &mem_buf_pool) noexcept;
 	};

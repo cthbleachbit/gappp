@@ -14,6 +14,8 @@
 #define __global__
 #endif
 
+#include "types.h"
+
 namespace GAPPP {
 	namespace l3fwd {
 		__global__ void VecAdd(float *A, float *B, float *C) {

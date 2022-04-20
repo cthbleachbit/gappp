@@ -25,6 +25,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(DPDK REQUIRED libdpdk)
 set(DPDK_LIBS "${DPDK_LDFLAGS}")
 include_directories(${DPDK_INCLUDE_DIRS})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # fmt
 option(GAPPP_USE_SYSTEM_FMT "Use system fmtlib" ON)
