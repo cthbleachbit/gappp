@@ -11,14 +11,17 @@
 
 /*
  * Notes: DPDK parameters must be placed before program parameters
- *
  * Hugepages of size 1GiB must be allocated before starting the program
+ *
+ * sudo ./gappp -w 41:00.0
+ * If testing on Ming's testbeds, use `-w 41:00.0` to take control of the card.
  */
+
 
 int main(int argc, char **argv) {
 	int ret;
 
-	// Initialize EAL
+	// Initialize EAL / DPDK
 	ret = rte_eal_init(argc, argv);
 	if (ret < 0) {
 		GAPPP::whine(GAPPP::Severity::CRIT, "Invalid EAL parameters");

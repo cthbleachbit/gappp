@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(GAPPP)
+project(gappp)
 set(SOVERSION 0)
 set(VERSION ${SOVERSION}.0.1)
 
