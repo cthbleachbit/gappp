@@ -26,10 +26,6 @@ Inspired by [PacketShader](https://dl.acm.org/doi/10.1145/1851275.1851207), this
 * On older Linux distros, you may want to define compiler version by exporting `CC=/path/to/gcc` and `CXX=/path/to/g++` before proceeding.
 * Make sure all submodules are up-to-date:
   - `git submodule update --init --recursive`
-* Check where `cuda.h` and `cudaTypedefs.h` - on my computer this is in `/usr/lib/cuda/targets/x86_64-linux/include/`.
-* Build DPDK - get into `dpdk` first:
-  - `meson <-DFLAG=value> -Dc_args=-I${CUDA_HEADER_DIR} build` (put values there if you need to)
-  - `ninja -C build`
 * Return to root dir:
   - `mkdir build`
   - `cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja ..`
