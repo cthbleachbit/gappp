@@ -8,6 +8,9 @@
 #include <vector>
 #include <cstdint>
 
+/**
+ * See https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY.html on efficient data structure copying
+ */
 namespace GAPPP {
 	struct route {
 		uint32_t network;
@@ -24,6 +27,8 @@ namespace GAPPP {
 	struct packet_info {
 		uint16_t incoming_port;
 		uint16_t outgoing_port;
+		uint16_t buf_len;
+		unsigned char *buf;
 	};
 }
 
