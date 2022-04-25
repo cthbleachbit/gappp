@@ -8,6 +8,7 @@
 #include <rte_eal.h>
 
 #include "Logging.h"
+#include "Router.h"
 
 /*
  * Notes: DPDK parameters must be placed before program parameters
@@ -33,6 +34,7 @@ int main(int argc, char **argv) {
 	// TODO: Handle program options
 
 	// TODO: Create router instance
+	GAPPP::Router r;
 
 	// TODO: Start event loop
 	return 0;

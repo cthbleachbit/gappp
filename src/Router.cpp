@@ -104,4 +104,11 @@ namespace GAPPP {
 		this->ports.emplace(port_id);
 		return true;
 	}
+
+	void Router::launch_threads() {
+		// TODO: create and start threads
+		// TODO: bind threads to cores
+		// TODO: block on keyboard input
+		// TODO: request threads to quit
+	}
 } // GAPPP
