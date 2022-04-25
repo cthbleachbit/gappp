@@ -2,8 +2,8 @@
 // Created by cth451 on 22-4-19.
 //
 
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef GAPPP_TYPES
+#define GAPPP_TYPES
 
 #include <vector>
 #include <cstdint>
@@ -34,4 +34,4 @@ namespace GAPPP {
 	};
 }
 
-#endif //TYPES_H
+#endif //GAPPP_TYPES
