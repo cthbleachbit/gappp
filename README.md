@@ -52,3 +52,5 @@ Looks like this:
 ```
 
 To test on testbeds, use something like `sudo ./gappp -w 41:00.0 -- --ip 10.0.0.1/24 --route simple-routes`
+
+To inject traffic, use a virtual device: `--vdev 'net_pcap0,rx_pcap=input.pcap,tx_pcap=output.pcap'` as part of DPDK EAL parameters.
