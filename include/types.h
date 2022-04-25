@@ -19,6 +19,8 @@ namespace GAPPP {
 		uint16_t out_port;
 	};
 
+	typedef std::vector<struct route> routing_table;
+
 	struct gpu_routing_table {
 		uint16_t num;
 		struct route *routes;
