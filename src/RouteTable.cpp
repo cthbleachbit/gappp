@@ -1,8 +1,6 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <vector>
-#include <cstdint>
 #include <optional>
 #include <arpa/inet.h>
 #include "types.h"
@@ -12,7 +10,7 @@
 namespace GAPPP {
 	static std::optional<struct sockaddr_in> parse_address(const std::string &input) {
 		struct sockaddr_in serve{};
-		int s = inet_pton(AF_INET, ipv4.c_str(), &serve.sin_addr);
+		int s = inet_pton(AF_INET, input.c_str(), &serve.sin_addr);
 		if (s <= 0) {
 			return std::nullopt;
 		} else {
