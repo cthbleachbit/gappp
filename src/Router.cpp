@@ -7,17 +7,6 @@
 
 #include <fmt/format.h>
 
-// Number of transmit descriptors
-#define GAPPP_DEFAULT_TX_DESC 10
-// Number of receive descriptors
-#define GAPPP_DEFAULT_RX_DESC 10
-// Number of transmit queue
-#define GAPPP_DEFAULT_TX_QUEUE 1
-// Number of receive queue
-#define GAPPP_DEFAULT_RX_QUEUE 1
-// Socket ID
-#define GAPPP_DEFAULT_SOCKET_ID 0
-
 namespace GAPPP {
 	static struct rte_eth_conf port_conf = {
 		.rxmode = {
@@ -110,5 +99,62 @@ namespace GAPPP {
 		// TODO: bind threads to cores
 		// TODO: block on keyboard input
 		// TODO: request threads to quit
+	}
+
+	static inline int
+	send_burst(struct Router::thread_local_mbuf *buf, uint16_t port, uint16_t queueid) {
+		int ret;
+
+		ret = rte_eth_tx_burst(port, queueid, buf->m_table, buf->len);
+		if (unlikely(ret < buf->len)) {
+			do {
+				rte_pktmbuf_free(buf->m_table[ret]);
+			}
+			while (++ret < buf->len);
+		}
+
+		return 0;
+	}
+
+	void Router::port_queue_event_loop(Router::thread_ident ident, struct Router::thread_local_mbuf *buf, bool *stop) {
+		struct rte_mbuf *pkts_burst[GAPPP_BURST_MAX_PACKET];
+		unsigned int lcore_id;
+		uint64_t prev_tsc, diff_tsc, cur_tsc;
+		int i, nb_rx;
+		uint8_t portid, queueid;
+		const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) /
+			US_PER_S * GAPPP_BURST_TX_DRAIN_US;
+
+		prev_tsc = 0;
+		lcore_id = rte_lcore_id();
+
+		whine(Severity::INFO,
+		      fmt::format("Entering main loop: lcore={}, port={}, rx queue={}", lcore_id, ident.port, ident.queue));
+
+		while (!*stop) {
+			cur_tsc = rte_rdtsc();
+
+			/*
+			 * TX burst queue drain
+			 */
+			diff_tsc = cur_tsc - prev_tsc;
+			if (unlikely(diff_tsc > drain_tsc)) {
+				send_burst(buf, buf->len, portid);
+				buf->len = 0;
+				prev_tsc = cur_tsc;
+			}
+
+			/*
+			 * Read packet from RX queues
+			 */
+			nb_rx = rte_eth_rx_burst(portid, queueid, pkts_burst,
+			                         GAPPP_BURST_MAX_PACKET);
+			if (nb_rx == 0)
+				continue;
+
+			// FIXME: this doesn't exist yet
+			// FIXME: tell GPU we have something to do
+			// CPU only implementation at https://github.com/ceph/dpdk/blob/master/examples/l3fwd/l3fwd_lpm_sse.h
+		}
 	}
 } // GAPPP

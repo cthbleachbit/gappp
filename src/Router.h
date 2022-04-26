@@ -19,32 +19,54 @@
 #include <unordered_map>
 #include <memory>
 
+// Number of transmit descriptors
+#define GAPPP_DEFAULT_TX_DESC 10
+// Number of receive descriptors
+#define GAPPP_DEFAULT_RX_DESC 10
+// Number of transmit queue
+#define GAPPP_DEFAULT_TX_QUEUE 1
+// Number of receive queue
+#define GAPPP_DEFAULT_RX_QUEUE 1
+// Socket ID
+#define GAPPP_DEFAULT_SOCKET_ID 0
+// Maximum number of cores i.e. threads
 #define GAPPP_MAX_CPU 64
+// Burst - batching packet TX
+#define GAPPP_BURST_MAX_PACKET 32
+// Burst - drain period in units of microseconds
+#define GAPPP_BURST_TX_DRAIN_US 100
 
 namespace GAPPP {
 
 	class Router {
-	public:
+	public: // ====== DATA STRUCTURES ==========
+
 		// Workers are identified with the port and queue id they tend to
 		struct thread_ident {
 			uint16_t port;
-			uint16_t rx_queue;
-			struct thread_ident_hash
-			{
-				std::size_t operator() (const thread_ident &id) const
-				{
+			// the same queue id is used for both TX and RX queues
+			uint16_t queue;
+			struct thread_ident_hash {
+				std::size_t operator()(const thread_ident &id) const {
 					std::size_t h1 = std::hash<uint16_t>()(id.port);
-					std::size_t h2 = std::hash<uint16_t>()(id.rx_queue);
+					std::size_t h2 = std::hash<uint16_t>()(id.queue);
 					return h1 + h2;
 				}
 			};
+		} __rte_cache_aligned;
+
+		// Per thread RX buffer
+		struct thread_local_mbuf {
+			uint16_t len;
+			struct rte_mbuf *m_table[GAPPP_BURST_MAX_PACKET];
 		};
+	public:
 		// Set of ports. Use rte_eth_dev_info_get to obtain rte_eth_dev_info
-		std::unordered_set<uint16_t> ports {};
+		std::unordered_set<uint16_t> ports{};
 		// Maps <port number, queue_id> to worker watching on
 		std::unordered_map<thread_ident, std::shared_ptr<std::thread>, thread_ident::thread_ident_hash> workers;
 		// Allocate workers to CPUs as we go
-		std::array<thread_ident, GAPPP_MAX_CPU> workers_affinity;
+		std::array<thread_ident, GAPPP_MAX_CPU> workers_affinity{};
 
 		Router() = default;
 
@@ -57,11 +79,18 @@ namespace GAPPP {
 		bool dev_probe(uint16_t port_id, struct rte_mempool &mem_buf_pool) noexcept;
 
 		/**
+		 * Main thread event loop
+		 * @param ident  thread identification
+		 * @param buf    a pointer array to track pending TX
+		 * @param stop   set to false to jump out of the loop
+		 */
+		void port_queue_event_loop(Router::thread_ident ident, struct Router::thread_local_mbuf *buf, bool *stop);
+
+		/**
 		 * Launch main event loop. This function will keep until ENTER key is pressed
 		 */
 		void launch_threads();
 	};
-
 
 } // GAPPP
 
