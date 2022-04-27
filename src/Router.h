@@ -84,7 +84,9 @@ namespace GAPPP {
 		 * @param buf    a pointer array to track pending TX
 		 * @param stop   set to false to jump out of the loop
 		 */
-		void port_queue_event_loop(Router::thread_ident ident, struct Router::thread_local_mbuf *buf, bool *stop);
+		void port_queue_event_loop(Router::thread_ident ident,
+		                           struct Router::thread_local_mbuf *buf,
+		                           volatile bool *stop);
 
 		/**
 		 * Launch main event loop. This function will keep until ENTER key is pressed

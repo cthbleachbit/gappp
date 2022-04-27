@@ -34,12 +34,12 @@ namespace GAPPP {
 		auto local_port_conf = port_conf;
 
 		if (!rte_eth_dev_is_valid_port(port_id))
-			throw std::runtime_error(fmt::format("Invalid port ID {}", port_id));
+			whine(Severity::CRIT, fmt::format("Invalid port ID {}", port_id));
 
 		ret_val = rte_eth_dev_info_get(port_id, &dev_info);
 		if (ret_val != 0)
-			throw std::runtime_error(fmt::format("Error during getting device (port {}) info: {}\n",
-			                                     port_id, strerror(-ret_val)));
+			whine(Severity::CRIT, fmt::format("Error during getting device (port {}) info: {}\n",
+			                                  port_id, strerror(-ret_val)));
 
 		// Turn on fast free if supported
 		if (dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MBUF_FAST_FREE)
@@ -49,14 +49,14 @@ namespace GAPPP {
 
 		ret_val = rte_eth_dev_configure(port_id, GAPPP_DEFAULT_RX_QUEUE, GAPPP_DEFAULT_TX_QUEUE, &local_port_conf);
 		if (ret_val != 0)
-			throw std::runtime_error(fmt::format("port {}: configuration failed (res={})\n",
-			                                     port_id, ret_val));
+			whine(Severity::CRIT, fmt::format("port {}: configuration failed (res={})\n",
+			                                  port_id, ret_val));
 
 		ret_val = rte_eth_dev_adjust_nb_rx_tx_desc(port_id, &nb_rxd, &nb_txd);
 		if (ret_val != 0)
-			throw std::runtime_error(fmt::format("port (): rte_eth_dev_adjust_nb_rx_tx_desc failed (res={})\n",
-			                                     port_id,
-			                                     ret_val));
+			whine(Severity::CRIT, fmt::format("port (): rte_eth_dev_adjust_nb_rx_tx_desc failed (res={})\n",
+			                                  port_id,
+			                                  ret_val));
 
 		// RX Queue setup
 		// FIXME: initialize multiple RX queue if needed
@@ -67,7 +67,7 @@ namespace GAPPP {
 		                                 &rxq_conf,
 		                                 &mem_buf_pool);
 		if (ret_val < 0)
-			throw std::runtime_error(fmt::format("port {}: RX queue 0 setup failed (res={})", port_id, ret_val));
+			whine(Severity::CRIT, fmt::format("port {}: RX queue 0 setup failed (res={})", port_id, ret_val));
 
 		// TX queue setup
 		// FIXME: initialize multiple TX queue if needed
@@ -77,17 +77,17 @@ namespace GAPPP {
 		                                 rte_eth_dev_socket_id(port_id),
 		                                 &txq_conf);
 		if (ret_val < 0)
-			throw std::runtime_error(fmt::format("port {}: TX queue 0 setup failed (res={})", port_id, ret_val));
+			whine(Severity::CRIT, fmt::format("port {}: TX queue 0 setup failed (res={})", port_id, ret_val));
 
 		// Start the port
 		ret_val = rte_eth_dev_start(port_id);
 		if (ret_val < 0)
-			throw std::runtime_error(fmt::format("Start port {} failed (res={})", port_id, ret_val));
+			whine(Severity::CRIT, fmt::format("Start port {} failed (res={})", port_id, ret_val));
 
 		struct rte_ether_addr addr{};
 		ret_val = rte_eth_macaddr_get(port_id, &addr);
 		if (ret_val != 0)
-			throw std::runtime_error(fmt::format("Mac address get port {} failed (res={})", port_id, ret_val));
+			whine(Severity::CRIT, fmt::format("Mac address get port {} failed (res={})", port_id, ret_val));
 
 		whine(Severity::INFO, fmt::format("Port {} MAC: {}", port_id, mac_addr_to_string(addr.addr_bytes)));
 		this->ports.emplace(port_id);
@@ -116,7 +116,9 @@ namespace GAPPP {
 		return 0;
 	}
 
-	void Router::port_queue_event_loop(Router::thread_ident ident, struct Router::thread_local_mbuf *buf, bool *stop) {
+	void Router::port_queue_event_loop(Router::thread_ident ident,
+	                                   struct Router::thread_local_mbuf *buf,
+	                                   volatile bool *stop) {
 		struct rte_mbuf *pkts_burst[GAPPP_BURST_MAX_PACKET];
 		unsigned int lcore_id;
 		uint64_t prev_tsc, diff_tsc, cur_tsc;
