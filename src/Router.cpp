@@ -102,7 +102,7 @@ namespace GAPPP {
 		return true;
 	}
 
-	void Router::launch_threads() {
+	void Router::launch_threads(volatile bool *stop) {
 		// TODO: create and start threads
 		// TODO: bind threads to cores
 		// TODO: block on keyboard input

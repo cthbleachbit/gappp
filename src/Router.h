@@ -44,7 +44,6 @@ namespace GAPPP {
 
 	class Router {
 	public: // ====== DATA STRUCTURES ==========
-
 		// Workers are identified with the port and queue id they tend to
 		struct thread_ident {
 			uint16_t port;
@@ -97,9 +96,9 @@ namespace GAPPP {
 		                           volatile bool *stop);
 
 		/**
-		 * Launch main event loop. This function will keep until ENTER key is pressed
+		 * Launch main event loop. This function will keep until "stop" is set to true
 		 */
-		void launch_threads();
+		void launch_threads(volatile bool *stop);
 
 	protected:
 		/**

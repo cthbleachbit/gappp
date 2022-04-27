@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fmt/format.h>
 #include <rte_eal.h>
+#include <csignal>
 
 #include "Logging.h"
 #include "Router.h"
@@ -18,6 +19,16 @@
  * If testing on Ming's testbeds, use `-w 41:00.0` to take control of the card.
  */
 
+GAPPP::Router *r = nullptr;
+bool stop = false;
+
+static void
+signal_handler(int signum) {
+	if (signum == SIGINT || signum == SIGTERM) {
+		GAPPP::whine(GAPPP::Severity::INFO, fmt::format("Signal {} received, preparing to exit", signum), "Main");
+		stop = true;
+	}
+}
 
 int main(int argc, char **argv) {
 	int ret;
@@ -26,15 +37,16 @@ int main(int argc, char **argv) {
 	ret = rte_eal_init(argc, argv);
 	if (ret < 0) {
 		GAPPP::whine(GAPPP::Severity::CRIT, "Invalid EAL parameters");
-		return 1;
 	}
 	argc -= ret;
 	argv += ret;
 
+	signal(SIGINT, signal_handler);
+	signal(SIGTERM, signal_handler);
+
 	// TODO: Handle program options
 
 	// TODO: Create router instance
-	GAPPP::Router r;
 
 	// TODO: Start event loop
 	return 0;
