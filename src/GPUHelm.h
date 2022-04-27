@@ -7,14 +7,21 @@
 
 #include <unordered_set>
 #include <future>
+#include <rte_ring.h>
+
+#define GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT 64
 
 namespace GAPPP {
 
 	class GPUHelm {
+		struct rte_ring *ring_tasks;
+
+	public:
 		/**
-		 * A set of outstanding GPU tasks waiting for returning
+		 * Construct a GPU helm and allocate associated message ring buffers
 		 */
-		std::unordered_set<std::promise<int>> outstanding;
+		GPUHelm();
+		~GPUHelm();
 	};
 
 } // GAPPP
