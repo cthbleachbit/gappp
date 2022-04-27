@@ -35,6 +35,10 @@
 #define GAPPP_BURST_MAX_PACKET 32
 // Burst - drain period in units of microseconds
 #define GAPPP_BURST_TX_DRAIN_US 100
+// ???
+#define GAPPP_MEMPOOL_CACHE_SIZE 256
+// Logging identifier
+#define GAPPP_LOG_ROUTER "Router"
 
 namespace GAPPP {
 
@@ -67,8 +71,12 @@ namespace GAPPP {
 		std::unordered_map<thread_ident, std::shared_ptr<std::thread>, thread_ident::thread_ident_hash> workers;
 		// Allocate workers to CPUs as we go
 		std::array<thread_ident, GAPPP_MAX_CPU> workers_affinity{};
+		// Pointers to per-NIC packet buffers, can be made NUMA aware but assuming 1 socket here.
+		// This should be allocated during router construction
+		std::array<struct rte_mempool *, RTE_MAX_ETHPORTS> packet_memory_pool{};
 
 		Router() = default;
+		~Router() = default;
 
 		/**
 		 * initialize an ethernet device
@@ -92,6 +100,14 @@ namespace GAPPP {
 		 * Launch main event loop. This function will keep until ENTER key is pressed
 		 */
 		void launch_threads();
+
+	protected:
+		/**
+		 * Allocate packet memory buffer for port
+		 * @param n_packet Number of packets to allocate for each port
+		 * @param port     Port (NIC) to allocate memory for
+		 */
+		void allocate_packet_memory_buffer(unsigned int n_packet, uint16_t port);
 	};
 
 } // GAPPP

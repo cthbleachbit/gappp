@@ -34,12 +34,12 @@ namespace GAPPP {
 		auto local_port_conf = port_conf;
 
 		if (!rte_eth_dev_is_valid_port(port_id))
-			whine(Severity::CRIT, fmt::format("Invalid port ID {}", port_id));
+			whine(Severity::CRIT, fmt::format("Invalid port ID {}", port_id), GAPPP_LOG_ROUTER);
 
 		ret_val = rte_eth_dev_info_get(port_id, &dev_info);
 		if (ret_val != 0)
 			whine(Severity::CRIT, fmt::format("Error during getting device (port {}) info: {}\n",
-			                                  port_id, strerror(-ret_val)));
+			                                  port_id, strerror(-ret_val)), GAPPP_LOG_ROUTER);
 
 		// Turn on fast free if supported
 		if (dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MBUF_FAST_FREE)
@@ -50,13 +50,13 @@ namespace GAPPP {
 		ret_val = rte_eth_dev_configure(port_id, GAPPP_DEFAULT_RX_QUEUE, GAPPP_DEFAULT_TX_QUEUE, &local_port_conf);
 		if (ret_val != 0)
 			whine(Severity::CRIT, fmt::format("port {}: configuration failed (res={})\n",
-			                                  port_id, ret_val));
+			                                  port_id, ret_val), GAPPP_LOG_ROUTER);
 
 		ret_val = rte_eth_dev_adjust_nb_rx_tx_desc(port_id, &nb_rxd, &nb_txd);
 		if (ret_val != 0)
 			whine(Severity::CRIT, fmt::format("port (): rte_eth_dev_adjust_nb_rx_tx_desc failed (res={})\n",
 			                                  port_id,
-			                                  ret_val));
+			                                  ret_val), GAPPP_LOG_ROUTER);
 
 		// RX Queue setup
 		// FIXME: initialize multiple RX queue if needed
@@ -67,7 +67,9 @@ namespace GAPPP {
 		                                 &rxq_conf,
 		                                 &mem_buf_pool);
 		if (ret_val < 0)
-			whine(Severity::CRIT, fmt::format("port {}: RX queue 0 setup failed (res={})", port_id, ret_val));
+			whine(Severity::CRIT,
+			      fmt::format("port {}: RX queue 0 setup failed (res={})", port_id, ret_val),
+			      GAPPP_LOG_ROUTER);
 
 		// TX queue setup
 		// FIXME: initialize multiple TX queue if needed
@@ -77,19 +79,25 @@ namespace GAPPP {
 		                                 rte_eth_dev_socket_id(port_id),
 		                                 &txq_conf);
 		if (ret_val < 0)
-			whine(Severity::CRIT, fmt::format("port {}: TX queue 0 setup failed (res={})", port_id, ret_val));
+			whine(Severity::CRIT,
+			      fmt::format("port {}: TX queue 0 setup failed (res={})", port_id, ret_val),
+			      GAPPP_LOG_ROUTER);
 
 		// Start the port
 		ret_val = rte_eth_dev_start(port_id);
 		if (ret_val < 0)
-			whine(Severity::CRIT, fmt::format("Start port {} failed (res={})", port_id, ret_val));
+			whine(Severity::CRIT, fmt::format("Start port {} failed (res={})", port_id, ret_val), GAPPP_LOG_ROUTER);
 
 		struct rte_ether_addr addr{};
 		ret_val = rte_eth_macaddr_get(port_id, &addr);
 		if (ret_val != 0)
-			whine(Severity::CRIT, fmt::format("Mac address get port {} failed (res={})", port_id, ret_val));
+			whine(Severity::CRIT,
+			      fmt::format("Mac address get port {} failed (res={})", port_id, ret_val),
+			      GAPPP_LOG_ROUTER);
 
-		whine(Severity::INFO, fmt::format("Port {} MAC: {}", port_id, mac_addr_to_string(addr.addr_bytes)));
+		whine(Severity::INFO,
+		      fmt::format("Port {} MAC: {}", port_id, mac_addr_to_string(addr.addr_bytes)),
+		      GAPPP_LOG_ROUTER);
 		this->ports.emplace(port_id);
 		return true;
 	}
@@ -157,6 +165,24 @@ namespace GAPPP {
 			// FIXME: this doesn't exist yet
 			// FIXME: tell GPU we have something to do
 			// CPU only implementation at https://github.com/ceph/dpdk/blob/master/examples/l3fwd/l3fwd_lpm_sse.h
+		}
+	}
+
+	void Router::allocate_packet_memory_buffer(unsigned int n_packet, uint16_t port) {
+		if (this->packet_memory_pool[port] == nullptr) {
+			std::string pool_name = fmt::format("Packet memory pool/{}", port);
+			this->packet_memory_pool[port] =
+				rte_pktmbuf_pool_create(pool_name.c_str(),
+				                        n_packet,
+				                        GAPPP_MEMPOOL_CACHE_SIZE,
+				                        0,
+				                        RTE_MBUF_DEFAULT_BUF_SIZE,
+				                        0);
+			if (this->packet_memory_pool[port] == nullptr) {
+				whine(Severity::CRIT, fmt::format("Allocation for {} failed", pool_name), GAPPP_LOG_ROUTER);
+			} else {
+				whine(Severity::INFO, fmt::format("Allocation for {} completed", pool_name), GAPPP_LOG_ROUTER);
+			}
 		}
 	}
 } // GAPPP
