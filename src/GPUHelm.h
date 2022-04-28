@@ -12,8 +12,12 @@
 
 #include "Router.h"
 
+// Slots to reserve in the ring_tasks buffer
 #define GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT 64
-#define GAPPP_GPU_HELM_TASK_BURST 4
+// Number of tasks to dequeue in one shot
+#define GAPPP_GPU_HELM_TASK_BURST 4U
+// Preallocate minion asynchronous results
+#define GAPPP_GPU_FUTURE_PREALLOCATE 10
 #define GAPPP_LOG_GPU_HELM "GPU Helm"
 
 namespace GAPPP {
@@ -26,7 +30,7 @@ namespace GAPPP {
 		// Note tha this buffer is multi-producer(running)/multi-consumer(passed directly to NIC workers)
 		struct rte_ring *ring_completion = nullptr;
 		// Outstanding GPU threads
-		std::unordered_map<std::shared_ptr<std::promise<int>>, std::shared_ptr<std::thread>> running{};
+		std::vector<std::shared_future<int>> running;
 
 	public:
 		/**

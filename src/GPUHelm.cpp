@@ -15,7 +15,7 @@ namespace GAPPP {
 		if (ring_completion == nullptr) {
 			whine(Severity::CRIT, "Cannot allocate Completion Queue ring buffer", "GPU Helm");
 		}
-
+		running.reserve(GAPPP_GPU_FUTURE_PREALLOCATE);
 		// TODO: Transfer routing table into GPU?
 	}
 
@@ -53,20 +53,20 @@ namespace GAPPP {
 			                                        nullptr);
 			if (nbr_local_tasks > 0) {
 				// TODO: spawn GPU minions that launches CUDA contexts
+				// Launch with
+				// this->running.emplace_back(std::async(std::launch::async, [<capture>] {thread_routine};));
 			}
 
-			for (auto minion = this->running.begin();
-			     minion != this->running.end();
-			     minion++) {
-				auto f = minion->first->get_future();
-				auto status = f.wait_for(0ms);
+			for (auto future = this->running.begin(); future != this->running.end(); future++) {
+				auto status = future->wait_for(0ms);
 
 				if (status == std::future_status::ready) {
-					whine(Severity::INFO, fmt::format("GPU minion returned with {}", f.get()), GAPPP_LOG_GPU_HELM);
+					whine(Severity::INFO,
+					      fmt::format("GPU minion returned with {}", future->get()),
+					      GAPPP_LOG_GPU_HELM);
 				}
 
-				minion->second->join();
-				this->running.erase(minion);
+				this->running.erase(future);
 			}
 		}
 	}
