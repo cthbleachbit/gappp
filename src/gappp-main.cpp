@@ -2,12 +2,11 @@
 // Created by cth451 on 2022/4/3.
 //
 
-#include <cstdint>
-#include <iostream>
 #include <fmt/format.h>
 #include <rte_eal.h>
 #include <csignal>
 #include <random>
+#include <future>
 
 #include "Logging.h"
 #include "Router.h"
@@ -20,19 +19,41 @@
  * If testing on Ming's testbeds, use `-w 41:00.0` to take control of the card.
  */
 
-GAPPP::Router *r = nullptr;
-volatile bool stop = false;
+namespace GAPPP {
+	static std::function<void(int)> shutdown_handler;
 
-static void
-signal_handler(int signum) {
-	if (signum == SIGINT || signum == SIGTERM) {
-		GAPPP::whine(GAPPP::Severity::INFO, fmt::format("Signal {} received, preparing to exit", signum), "Main");
-		stop = true;
+	/**
+	 * C-style signal handler wrapper
+	 * @param signum
+	 */
+	static void	signal_handler(int signum) {
+		shutdown_handler(signum);
 	}
-}
+};
 
 int main(int argc, char **argv) {
 	int ret;
+	GAPPP::Router *r = nullptr;
+	volatile bool stop = false;
+	std::future<void> r_thread;
+	std::future<void> g_thread;
+
+	/**
+	 * Actual shutdown handler - issue stop
+	 */
+	GAPPP::shutdown_handler = [&stop, &r_thread, &g_thread](int signum) {
+		using namespace std::chrono_literals;
+		if (signum == SIGINT || signum == SIGTERM) {
+			GAPPP::whine(GAPPP::Severity::INFO, fmt::format("Signal {} received, preparing to exit", signum), "Main");
+			stop = true;
+			while(r_thread.wait_for(5s) != std::future_status::ready) {
+				GAPPP::whine(GAPPP::Severity::INFO, "Waiting for router event loop to exit", "Main");
+			};
+			while(g_thread.wait_for(5s) != std::future_status::ready) {
+				GAPPP::whine(GAPPP::Severity::INFO, "Waiting for gpu event loop to exit", "Main");
+			};
+		}
+	};
 
 	// Initialize EAL / DPDK
 	ret = rte_eal_init(argc, argv);
@@ -42,8 +63,8 @@ int main(int argc, char **argv) {
 	argc -= ret;
 	argv += ret;
 
-	signal(SIGINT, signal_handler);
-	signal(SIGTERM, signal_handler);
+	signal(SIGINT, GAPPP::signal_handler);
+	signal(SIGTERM, GAPPP::signal_handler);
 
 	// Seed the RNG - needed to randomly select TX queue
 	std::random_device rng;
