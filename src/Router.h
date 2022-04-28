@@ -18,6 +18,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <memory>
+#include <fmt/format.h>
 
 // Number of transmit descriptors
 #define GAPPP_DEFAULT_TX_DESC 10
@@ -110,5 +111,19 @@ namespace GAPPP {
 	};
 
 } // GAPPP
+
+template <> struct fmt::formatter<GAPPP::Router::thread_ident> {
+	constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+		auto it = ctx.begin(), end = ctx.end();
+		if (it != end && *it != '}') throw format_error("invalid format");
+		return it;
+	}
+
+	template <typename FormatContext>
+	auto format(const GAPPP::Router::thread_ident& id, FormatContext& ctx) -> decltype(ctx.out()) {
+		// ctx.out() is an output iterator to write to.
+		return format_to(ctx.out(), "eth{}/worker{}", id.port, id.queue);
+	}
+};
 
 #endif //ROUTER_H
