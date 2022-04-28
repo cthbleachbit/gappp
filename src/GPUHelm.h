@@ -23,7 +23,7 @@
 namespace GAPPP {
 
 	class GPUHelm {
-		// Incoming buffers - CPU workers will submit tasks to this ring buffer
+		// Incoming buffers - CPU workers will submit_rx tasks to this ring buffer
 		// Note that this buffer is multi-producer/single-consumer.
 		struct rte_ring *ring_tasks = nullptr;
 		// GPU threads will place finished data here
@@ -31,6 +31,9 @@ namespace GAPPP {
 		struct rte_ring *ring_completion = nullptr;
 		// Outstanding GPU threads
 		std::vector<std::shared_future<int>> running;
+
+		// Pointer to initialized router instance - ownership is borrowed (i.e. not to be freed)
+		Router *r;
 
 	public:
 		/**
@@ -49,7 +52,7 @@ namespace GAPPP {
 		 * @param task      incoming packet to process - this pointer will be freed upon consumption by GPU helm
 		 * @return    0 if submission was successful
 		 */
-		int submit(Router::thread_ident thread_id, Router::thread_local_mbuf *task);
+		int submit_rx(Router::thread_ident thread_id, Router::thread_local_mbuf *task);
 
 		/**
 		 * GPU main event loop
@@ -57,6 +60,13 @@ namespace GAPPP {
 		 * @param r        the router where output should be delivered to
 		 */
 		void gpu_helm_event_loop(const volatile bool *stop, Router &r);
+
+		void inline assign_router(Router *r) {
+			this->r = r;
+		}
+
+	private:
+		int gpu_minion_thread();
 	};
 
 } // GAPPP

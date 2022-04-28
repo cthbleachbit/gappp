@@ -26,7 +26,7 @@ namespace GAPPP {
 		ring_completion = nullptr;
 	}
 
-	int GPUHelm::submit(Router::thread_ident thread_id, Router::thread_local_mbuf *task) {
+	int GPUHelm::submit_rx(Router::thread_ident thread_id, Router::thread_local_mbuf *task) {
 		int ret;
 		ret = rte_ring_enqueue(this->ring_tasks, task);
 		whine(Severity::INFO,

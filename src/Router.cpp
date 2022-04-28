@@ -6,22 +6,23 @@
 #include "Logging.h"
 
 #include <fmt/format.h>
+#include <random>
 
 namespace GAPPP {
 	static struct rte_eth_conf port_conf = {
-		.rxmode = {
-			.mq_mode = ETH_MQ_RX_NONE,
-			.split_hdr_size = 0,
-		},
-		.txmode = {
-			.mq_mode = ETH_MQ_TX_NONE,
-		},
-		.rx_adv_conf = {
-			.rss_conf = {
-				.rss_key = nullptr,
-				.rss_hf = 0,
+			.rxmode = {
+					.mq_mode = ETH_MQ_RX_NONE,
+					.split_hdr_size = 0,
 			},
-		},
+			.txmode = {
+					.mq_mode = ETH_MQ_TX_NONE,
+			},
+			.rx_adv_conf = {
+					.rss_conf = {
+							.rss_key = nullptr,
+							.rss_hf = 0,
+					},
+			},
 	};
 
 	bool Router::dev_probe(uint16_t port_id, struct rte_mempool &mem_buf_pool) noexcept {
@@ -117,8 +118,7 @@ namespace GAPPP {
 		if (unlikely(ret < buf->len)) {
 			do {
 				rte_pktmbuf_free(buf->m_table[ret]);
-			}
-			while (++ret < buf->len);
+			} while (++ret < buf->len);
 		}
 
 		return 0;
@@ -133,7 +133,7 @@ namespace GAPPP {
 		int i, nb_rx;
 		uint8_t portid, queueid;
 		const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) /
-			US_PER_S * GAPPP_BURST_TX_DRAIN_US;
+		                           US_PER_S * GAPPP_BURST_TX_DRAIN_US;
 
 		prev_tsc = 0;
 		lcore_id = rte_lcore_id();
@@ -172,12 +172,12 @@ namespace GAPPP {
 		if (this->packet_memory_pool[port] == nullptr) {
 			std::string pool_name = fmt::format("Packet memory pool/{}", port);
 			this->packet_memory_pool[port] =
-				rte_pktmbuf_pool_create(pool_name.c_str(),
-				                        n_packet,
-				                        GAPPP_MEMPOOL_CACHE_SIZE,
-				                        0,
-				                        RTE_MBUF_DEFAULT_BUF_SIZE,
-				                        0);
+					rte_pktmbuf_pool_create(pool_name.c_str(),
+					                        n_packet,
+					                        GAPPP_MEMPOOL_CACHE_SIZE,
+					                        0,
+					                        RTE_MBUF_DEFAULT_BUF_SIZE,
+					                        0);
 			if (this->packet_memory_pool[port] == nullptr) {
 				whine(Severity::CRIT, fmt::format("Allocation for {} failed", pool_name), GAPPP_LOG_ROUTER);
 			} else {
@@ -185,4 +185,23 @@ namespace GAPPP {
 			}
 		}
 	}
+
+	void Router::submit_tx(uint16_t port_id, Router::thread_local_mbuf *buf) {
+		std::uniform_int_distribution<uint16_t> dist(1, GAPPP_DEFAULT_TX_QUEUE);
+		uint16_t queue = dist(this->rng_engine);
+		struct rte_ring *tx_ring = nullptr;
+		struct thread_ident id{port_id, queue};
+		try {
+			tx_ring = this->ring_tx.at(id);
+		} catch (std::out_of_range &e) {
+			whine(Severity::CRIT, fmt::format("No TX buffer allocated for {}", id), GAPPP_LOG_ROUTER);
+		};
+		int ret = rte_ring_enqueue(tx_ring, buf);
+		if (ret < 0) {
+			whine(Severity::CRIT, fmt::format("Enqueueing TX buffer for {} failed with {}", id, ret), GAPPP_LOG_ROUTER);
+		}
+	}
+
+	Router::Router(std::default_random_engine &rng_engine) :
+			rng_engine(rng_engine) {}
 } // GAPPP

@@ -7,6 +7,7 @@
 #include <fmt/format.h>
 #include <rte_eal.h>
 #include <csignal>
+#include <random>
 
 #include "Logging.h"
 #include "Router.h"
@@ -20,7 +21,7 @@
  */
 
 GAPPP::Router *r = nullptr;
-bool stop = false;
+volatile bool stop = false;
 
 static void
 signal_handler(int signum) {
@@ -44,11 +45,15 @@ int main(int argc, char **argv) {
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
 
+	// Seed the RNG - needed to randomly select TX queue
+	std::random_device rng;
+	std::default_random_engine rng_engine(rng());
+
 	// TODO: Handle program options
 
 	// TODO: Create router instance
 	struct rte_mempool pool{};
-	r = new GAPPP::Router();
+	r = new GAPPP::Router(rng_engine);
 	r->dev_probe(0, pool);
 
 	// TODO: Start event loop

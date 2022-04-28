@@ -14,6 +14,7 @@
 #include <rte_dev.h>
 #include <rte_ethdev.h>
 #include <thread>
+#include <random>
 
 #include <unordered_set>
 #include <unordered_map>
@@ -57,6 +58,15 @@ namespace GAPPP {
 					return h1 + h2;
 				}
 			};
+
+			inline std::strong_ordering operator<=>(const struct thread_ident &rhs) const {
+				if (auto cmp = this->port <=> rhs.port; cmp !=0) {
+					return cmp;
+				}
+				return this->queue <=> rhs.queue;
+			};
+
+			bool operator==(const struct thread_ident &rhs) const = default;
 		} __rte_cache_aligned;
 
 		// Per thread RX buffer
@@ -64,6 +74,8 @@ namespace GAPPP {
 			uint16_t len;
 			struct rte_mbuf *m_table[GAPPP_BURST_MAX_PACKET];
 		};
+	private:
+		std::default_random_engine& rng_engine;
 	public:
 		// Set of ports. Use rte_eth_dev_info_get to obtain rte_eth_dev_info
 		std::unordered_set<uint16_t> ports{};
@@ -74,8 +86,10 @@ namespace GAPPP {
 		// Pointers to per-NIC packet buffers, can be made NUMA aware but assuming 1 socket here.
 		// This should be allocated during router construction
 		std::array<struct rte_mempool *, RTE_MAX_ETHPORTS> packet_memory_pool{};
+		// Ring buffers per worker
+		std::unordered_map<thread_ident, struct rte_ring*, thread_ident::thread_ident_hash> ring_tx;
 
-		Router() = default;
+		Router(std::default_random_engine& rng_engine);
 		~Router() = default;
 
 		/**
@@ -100,6 +114,13 @@ namespace GAPPP {
 		 * Launch main event loop. This function will keep until "stop" is set to true
 		 */
 		void launch_threads(volatile bool *stop);
+
+		/**
+		 * Submit processed packets for transmission
+		 * @param port_id
+		 * @param buf
+		 */
+		void submit_tx(uint16_t port_id, struct Router::thread_local_mbuf *buf);
 
 	protected:
 		/**
