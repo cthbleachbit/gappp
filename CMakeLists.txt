@@ -39,6 +39,16 @@ else()
 	set(fmt_LIBS fmt::fmt-header-only)
 endif()
 
+# optimization options
+option(GAPPP_LTO "Use link time optimization" ON)
+if (GAPPP_LTO)
+	include(CheckIPOSupported)
+	check_ipo_supported()
+	set_property(GLOBAL PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+	set_property(GLOBAL PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+endif ()
+
 add_subdirectory(cuda-src)
 
 add_subdirectory(src)
