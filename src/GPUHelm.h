@@ -7,21 +7,52 @@
 
 #include <unordered_set>
 #include <future>
+#include <tuple>
 #include <rte_ring.h>
 
+#include "Router.h"
+
 #define GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT 64
+#define GAPPP_GPU_HELM_TASK_BURST 4
+#define GAPPP_LOG_GPU_HELM "GPU Helm"
 
 namespace GAPPP {
 
 	class GPUHelm {
-		struct rte_ring *ring_tasks;
+		// Incoming buffers - CPU workers will submit tasks to this ring buffer
+		// Note that this buffer is multi-producer/single-consumer.
+		struct rte_ring *ring_tasks = nullptr;
+		// GPU threads will place finished data here
+		// Note tha this buffer is multi-producer(running)/multi-consumer(passed directly to NIC workers)
+		struct rte_ring *ring_completion = nullptr;
+		// Outstanding GPU threads
+		std::unordered_map<std::shared_ptr<std::promise<int>>, std::shared_ptr<std::thread>> running{};
 
 	public:
 		/**
 		 * Construct a GPU helm and allocate associated message ring buffers
 		 */
 		GPUHelm();
+
+		/**
+		 * Free the associated data structures
+		 */
 		~GPUHelm();
+
+		/**
+		 * Submit tasks to the GPU Helm
+		 * @param thread_id identity of running thread
+		 * @param task      incoming packet to process - this pointer will be freed upon consumption by GPU helm
+		 * @return    0 if submission was successful
+		 */
+		int submit(Router::thread_ident thread_id, Router::thread_local_mbuf *task);
+
+		/**
+		 * GPU main event loop
+		 * @param stop     terminate when stop is true
+		 * @param r        the router where output should be delivered to
+		 */
+		void gpu_helm_event_loop(const volatile bool *stop, Router &r);
 	};
 
 } // GAPPP
