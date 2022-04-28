@@ -47,6 +47,9 @@ int main(int argc, char **argv) {
 	// TODO: Handle program options
 
 	// TODO: Create router instance
+	struct rte_mempool pool{};
+	r = new GAPPP::Router();
+	r->dev_probe(0, pool);
 
 	// TODO: Start event loop
 	return 0;
