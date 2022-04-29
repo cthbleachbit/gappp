@@ -26,7 +26,7 @@ namespace GAPPP {
 		ring_completion = nullptr;
 	}
 
-	int GPUHelm::submit_rx(Router::thread_ident thread_id, Router::thread_local_mbuf *task) {
+	int GPUHelm::submit_rx(router_thread_ident thread_id, router_thread_local_mbuf *task) {
 		int ret;
 		ret = rte_ring_enqueue(this->ring_tasks, task);
 		whine(Severity::INFO,
@@ -35,15 +35,15 @@ namespace GAPPP {
 		return ret;
 	}
 
-	void GPUHelm::gpu_helm_event_loop(const volatile bool *stop, Router &r) {
+	void GPUHelm::gpu_helm_event_loop(const volatile bool *stop) {
 		using namespace std::chrono_literals;
 
 		if (!this->ring_tasks || !this->ring_completion) {
 			whine(Severity::CRIT, "GPU Helm ring buffers are not initialized", GAPPP_LOG_GPU_HELM);
 		}
 
-		std::array<Router::thread_local_mbuf *, GAPPP_GPU_HELM_TASK_BURST> local_tasks{};
-		std::array<Router::thread_local_mbuf *, GAPPP_GPU_HELM_TASK_BURST> local_completion{};
+		std::array<router_thread_local_mbuf *, GAPPP_GPU_HELM_TASK_BURST> local_tasks{};
+		std::array<router_thread_local_mbuf *, GAPPP_GPU_HELM_TASK_BURST> local_completion{};
 		int nbr_local_tasks = 0;
 
 		while (!*stop) {

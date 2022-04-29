@@ -111,7 +111,7 @@ namespace GAPPP {
 	}
 
 	static inline int
-	send_burst(struct Router::thread_local_mbuf *buf, uint16_t port, uint16_t queueid) {
+	send_burst(struct router_thread_local_mbuf *buf, uint16_t port, uint16_t queueid) {
 		int ret;
 
 		ret = rte_eth_tx_burst(port, queueid, buf->m_table, buf->len);
@@ -124,8 +124,8 @@ namespace GAPPP {
 		return 0;
 	}
 
-	void Router::port_queue_event_loop(Router::thread_ident ident,
-	                                   struct Router::thread_local_mbuf *buf,
+	void Router::port_queue_event_loop(struct router_thread_ident ident,
+	                                   struct router_thread_local_mbuf *buf,
 	                                   volatile bool *stop) {
 		struct rte_mbuf *pkts_burst[GAPPP_BURST_MAX_PACKET];
 		unsigned int lcore_id;
@@ -186,11 +186,11 @@ namespace GAPPP {
 		}
 	}
 
-	void Router::submit_tx(uint16_t port_id, Router::thread_local_mbuf *buf) {
+	void Router::submit_tx(uint16_t port_id, struct router_thread_local_mbuf *buf) {
 		std::uniform_int_distribution<uint16_t> dist(1, GAPPP_DEFAULT_TX_QUEUE);
 		uint16_t queue = dist(this->rng_engine);
 		struct rte_ring *tx_ring = nullptr;
-		struct thread_ident id{port_id, queue};
+		struct router_thread_ident id{port_id, queue};
 		try {
 			tx_ring = this->ring_tx.at(id);
 		} catch (std::out_of_range &e) {
@@ -202,6 +202,11 @@ namespace GAPPP {
 		}
 	}
 
-	Router::Router(std::default_random_engine &rng_engine) :
+	Router::Router(std::default_random_engine &rng_engine) noexcept :
 			rng_engine(rng_engine) {}
+
+
+	void Router::set_gpu_helm(GPUHelm *helm) noexcept {
+		this->g = helm;
+	}
 } // GAPPP

@@ -10,6 +10,7 @@
 
 #include "Logging.h"
 #include "Router.h"
+#include "GPUHelm.h"
 
 /*
  * Notes: DPDK parameters must be placed before program parameters
@@ -72,9 +73,15 @@ int main(int argc, char **argv) {
 
 	// TODO: Handle program options
 
+	// TODO: Create GPU Helm
+	GAPPP::GPUHelm helm;
+
 	// TODO: Create router instance
 	struct rte_mempool pool{};
 	r = new GAPPP::Router(rng_engine);
+	// Link router to GPU helm
+	helm.assign_router(r);
+
 	r->dev_probe(0, pool);
 
 	// TODO: Start event loop

@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <future>
 #include <tuple>
+#include <vector>
 #include <rte_ring.h>
 
 #include "Router.h"
@@ -49,17 +50,19 @@ namespace GAPPP {
 		/**
 		 * Submit tasks to the GPU Helm
 		 * @param thread_id identity of running thread
-		 * @param task      incoming packet to process - this pointer will be freed upon consumption by GPU helm
+		 * @param task      incoming packet to process
+		 *                  the packet buffer are allocated from within CPU worker from the memory pool
+		 *                  ownership is transferred to GPU-helm - will be freed after DMA to GPU.
 		 * @return    0 if submission was successful
 		 */
-		int submit_rx(Router::thread_ident thread_id, Router::thread_local_mbuf *task);
+		int submit_rx(router_thread_ident thread_id, router_thread_local_mbuf *task);
 
 		/**
 		 * GPU main event loop
 		 * @param stop     terminate when stop is true
 		 * @param r        the router where output should be delivered to
 		 */
-		void gpu_helm_event_loop(const volatile bool *stop, Router &r);
+		void gpu_helm_event_loop(const volatile bool *stop);
 
 		void inline assign_router(Router *r) {
 			this->r = r;

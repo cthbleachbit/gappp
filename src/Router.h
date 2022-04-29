@@ -44,52 +44,68 @@
 
 namespace GAPPP {
 
-	class Router {
-	public: // ====== DATA STRUCTURES ==========
-		// Workers are identified with the port and queue id they tend to
-		struct thread_ident {
-			uint16_t port;
-			// the same queue id is used for both TX and RX queues
-			uint16_t queue;
-			struct thread_ident_hash {
-				std::size_t operator()(const thread_ident &id) const {
-					std::size_t h1 = std::hash<uint16_t>()(id.port);
-					std::size_t h2 = std::hash<uint16_t>()(id.queue);
-					return h1 + h2;
-				}
-			};
+	// Forward declaration
+	class GPUHelm;
 
-			inline std::strong_ordering operator<=>(const struct thread_ident &rhs) const {
-				if (auto cmp = this->port <=> rhs.port; cmp !=0) {
-					return cmp;
-				}
-				return this->queue <=> rhs.queue;
-			};
-
-			bool operator==(const struct thread_ident &rhs) const = default;
-		} __rte_cache_aligned;
-
-		// Per thread RX buffer
-		struct thread_local_mbuf {
-			uint16_t len;
-			struct rte_mbuf *m_table[GAPPP_BURST_MAX_PACKET];
+	// DATA STRUCTURES
+	struct router_thread_ident {
+		uint16_t port;
+		// the same queue id is used for both TX and RX queues
+		uint16_t queue;
+		struct hash {
+			std::size_t operator()(const router_thread_ident &id) const {
+				std::size_t h1 = std::hash<uint16_t>()(id.port);
+				std::size_t h2 = std::hash<uint16_t>()(id.queue);
+				return h1 + h2;
+			}
 		};
+
+		inline std::strong_ordering operator<=>(const struct router_thread_ident &rhs) const {
+			if (auto cmp = this->port <=> rhs.port; cmp !=0) {
+				return cmp;
+			}
+			return this->queue <=> rhs.queue;
+		};
+
+		bool operator==(const struct router_thread_ident &rhs) const = default;
+	} __rte_cache_aligned;
+
+	// Per thread RX buffer
+	struct router_thread_local_mbuf {
+		uint16_t len;
+		struct rte_mbuf *m_table[GAPPP_BURST_MAX_PACKET];
+	};
+
+	/**
+	 * Router instance
+	 *
+	 * A router takes control over one or more ports, creates a handful of queues and spawn threads to poll the queues.
+	 * When RX occur on a queue:
+	 *    - DPDK allocates packet in local buffers and place pointers to packets in RX queue.
+	 *    - workers dequeue and send pointers to GPUHelm
+	 *    - GPUHelm spawns asynchronous minions, DMA packets to GPU memory, free the packets, launches CUDA kernel
+	 * When GPU minions return:
+	 *    - Minions call submit_tx() to schedule packet for delivery.
+	 *    - FIXME: memory allocation?
+	 */
+	class Router {
 	private:
 		std::default_random_engine& rng_engine;
+		GPUHelm *g;
 	public:
 		// Set of ports. Use rte_eth_dev_info_get to obtain rte_eth_dev_info
 		std::unordered_set<uint16_t> ports{};
 		// Maps <port number, queue_id> to worker watching on
-		std::unordered_map<thread_ident, std::shared_ptr<std::thread>, thread_ident::thread_ident_hash> workers;
+		std::unordered_map<router_thread_ident, std::shared_ptr<std::thread>, router_thread_ident::hash> workers;
 		// Allocate workers to CPUs as we go
-		std::array<thread_ident, GAPPP_MAX_CPU> workers_affinity{};
+		std::array<router_thread_ident, GAPPP_MAX_CPU> workers_affinity{};
 		// Pointers to per-NIC packet buffers, can be made NUMA aware but assuming 1 socket here.
 		// This should be allocated during router construction
 		std::array<struct rte_mempool *, RTE_MAX_ETHPORTS> packet_memory_pool{};
 		// Ring buffers per worker
-		std::unordered_map<thread_ident, struct rte_ring*, thread_ident::thread_ident_hash> ring_tx;
+		std::unordered_map<router_thread_ident, struct rte_ring*, router_thread_ident::hash> ring_tx;
 
-		Router(std::default_random_engine& rng_engine);
+		explicit Router(std::default_random_engine& rng_engine) noexcept;
 		~Router() = default;
 
 		/**
@@ -106,8 +122,8 @@ namespace GAPPP {
 		 * @param buf    a pointer array to track pending TX
 		 * @param stop   set to false to jump out of the loop
 		 */
-		void port_queue_event_loop(Router::thread_ident ident,
-		                           struct Router::thread_local_mbuf *buf,
+		void port_queue_event_loop(struct router_thread_ident ident,
+		                           struct router_thread_local_mbuf *buf,
 		                           volatile bool *stop);
 
 		/**
@@ -120,7 +136,13 @@ namespace GAPPP {
 		 * @param port_id
 		 * @param buf
 		 */
-		void submit_tx(uint16_t port_id, struct Router::thread_local_mbuf *buf);
+		void submit_tx(uint16_t port_id, struct router_thread_local_mbuf *buf);
+
+		/**
+		 * Assign GPU helm to router
+		 * @param helm
+		 */
+		void set_gpu_helm(GPUHelm *helm) noexcept;
 
 	protected:
 		/**
@@ -133,7 +155,7 @@ namespace GAPPP {
 
 } // GAPPP
 
-template <> struct fmt::formatter<GAPPP::Router::thread_ident> {
+template <> struct fmt::formatter<GAPPP::router_thread_ident> {
 	constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
 		auto it = ctx.begin(), end = ctx.end();
 		if (it != end && *it != '}') throw format_error("invalid format");
@@ -141,7 +163,7 @@ template <> struct fmt::formatter<GAPPP::Router::thread_ident> {
 	}
 
 	template <typename FormatContext>
-	auto format(const GAPPP::Router::thread_ident& id, FormatContext& ctx) -> decltype(ctx.out()) {
+	auto format(const GAPPP::router_thread_ident& id, FormatContext& ctx) -> decltype(ctx.out()) {
 		// ctx.out() is an output iterator to write to.
 		return format_to(ctx.out(), "eth{}/worker{}", id.port, id.queue);
 	}
