@@ -22,9 +22,9 @@
 #include <fmt/format.h>
 
 // Number of transmit descriptors
-#define GAPPP_DEFAULT_TX_DESC 10
+#define GAPPP_DEFAULT_TX_DESC (1 << 4)
 // Number of receive descriptors
-#define GAPPP_DEFAULT_RX_DESC 10
+#define GAPPP_DEFAULT_RX_DESC (1 << 4)
 // Number of transmit queue
 #define GAPPP_DEFAULT_TX_QUEUE 1
 // Number of receive queue
