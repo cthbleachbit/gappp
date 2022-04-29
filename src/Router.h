@@ -39,6 +39,8 @@
 #define GAPPP_BURST_TX_DRAIN_US 100
 // ???
 #define GAPPP_MEMPOOL_CACHE_SIZE 256
+// Memory pool size
+#define GAPPP_MEMPOOL_PACKETS ((1 << 16) - 1)
 // Logging identifier
 #define GAPPP_LOG_ROUTER "Router"
 
@@ -114,7 +116,7 @@ namespace GAPPP {
 		 * @param mem_buf_pool  memory buffer to setup
 		 * @return true if the device is initialized successfully and registered in the ports array
 		 */
-		bool dev_probe(uint16_t port_id, struct rte_mempool &mem_buf_pool) noexcept;
+		bool dev_probe(uint16_t port_id) noexcept;
 
 		/**
 		 * Main thread event loop

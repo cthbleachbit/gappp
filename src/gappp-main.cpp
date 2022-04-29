@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
 	// Link router to GPU helm
 	helm.assign_router(r);
 
-	r->dev_probe(0, pool);
+	r->dev_probe(0);
 
 	// TODO: Start event loop
 	return 0;

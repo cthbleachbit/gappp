@@ -25,7 +25,7 @@ namespace GAPPP {
 			},
 	};
 
-	bool Router::dev_probe(uint16_t port_id, struct rte_mempool &mem_buf_pool) noexcept {
+	bool Router::dev_probe(uint16_t port_id) noexcept {
 		int ret_val;
 		uint16_t nb_rxd = GAPPP_DEFAULT_RX_DESC;
 		uint16_t nb_txd = GAPPP_DEFAULT_TX_DESC;
@@ -59,6 +59,9 @@ namespace GAPPP {
 			                                  port_id,
 			                                  ret_val), GAPPP_LOG_ROUTER);
 
+		// Allocate packet buffer for this NIC
+		allocate_packet_memory_buffer(GAPPP_MEMPOOL_PACKETS, port_id);
+
 		// RX Queue setup
 		// FIXME: initialize multiple RX queue if needed
 		rxq_conf = dev_info.default_rxconf;
@@ -66,7 +69,7 @@ namespace GAPPP {
 		ret_val = rte_eth_rx_queue_setup(port_id, 0, nb_rxd,
 		                                 rte_eth_dev_socket_id(port_id),
 		                                 &rxq_conf,
-		                                 &mem_buf_pool);
+		                                 this->packet_memory_pool[port_id]);
 		if (ret_val < 0)
 			whine(Severity::CRIT,
 			      fmt::format("port {}: RX queue 0 setup failed (res={})", port_id, ret_val),
