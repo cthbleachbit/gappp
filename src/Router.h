@@ -13,7 +13,7 @@
 
 #include <rte_dev.h>
 #include <rte_ethdev.h>
-#include <thread>
+#include <future>
 #include <random>
 
 #include <unordered_set>
@@ -98,7 +98,7 @@ namespace GAPPP {
 		// Set of ports. Use rte_eth_dev_info_get to obtain rte_eth_dev_info
 		std::unordered_set<uint16_t> ports{};
 		// Maps <port number, queue_id> to worker watching on
-		std::unordered_map<router_thread_ident, std::shared_ptr<std::thread>, router_thread_ident::hash> workers;
+		std::unordered_map<router_thread_ident, std::shared_future<void>, router_thread_ident::hash> workers;
 		// Allocate workers to CPUs as we go
 		std::array<router_thread_ident, GAPPP_MAX_CPU> workers_affinity{};
 		// Pointers to per-NIC packet buffers, can be made NUMA aware but assuming 1 socket here.
