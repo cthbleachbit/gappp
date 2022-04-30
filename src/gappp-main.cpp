@@ -34,7 +34,8 @@ namespace GAPPP {
 
 int main(int argc, char **argv) {
 	int ret;
-	GAPPP::Router *r = nullptr;
+	GAPPP::Router *router = nullptr;
+	GAPPP::GPUHelm *helm = nullptr;
 	volatile bool stop = false;
 	std::future<void> r_thread;
 	std::future<void> g_thread;
@@ -74,16 +75,22 @@ int main(int argc, char **argv) {
 	// TODO: Handle program options
 
 	// TODO: Create GPU Helm
-	GAPPP::GPUHelm helm;
+	helm = new GAPPP::GPUHelm();
 
 	// TODO: Create router instance
 	struct rte_mempool pool{};
-	r = new GAPPP::Router(rng_engine);
+	router = new GAPPP::Router(rng_engine);
 	// Link router to GPU helm
-	helm.assign_router(r);
+	helm->assign_router(router);
+	router->assign_gpu_helm(helm);
 
-	r->dev_probe(0);
+	router->dev_probe(0);
 
 	// TODO: Start event loop
+
+	// END
+	delete router;
+	delete helm;
+
 	return 0;
 }

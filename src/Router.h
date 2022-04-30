@@ -144,7 +144,7 @@ namespace GAPPP {
 		 * Assign GPU helm to router
 		 * @param helm
 		 */
-		void set_gpu_helm(GPUHelm *helm) noexcept;
+		void assign_gpu_helm(GPUHelm *helm) noexcept;
 
 	protected:
 		/**

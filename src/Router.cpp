@@ -209,7 +209,7 @@ namespace GAPPP {
 			rng_engine(rng_engine) {}
 
 
-	void Router::set_gpu_helm(GPUHelm *helm) noexcept {
+	void Router::assign_gpu_helm(GPUHelm *helm) noexcept {
 		this->g = helm;
 	}
 } // GAPPP
