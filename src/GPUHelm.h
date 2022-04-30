@@ -55,12 +55,23 @@ namespace GAPPP {
 		 *                  ownership is transferred to GPU-helm - will be freed after DMA to GPU.
 		 * @return    0 if submission was successful
 		 */
-		int submit_rx(router_thread_ident thread_id, router_thread_local_mbuf *task);
+		unsigned int submit_rx(router_thread_ident thread_id, router_thread_local_mbuf *task);
+
+		/**
+		 * Submit tasks to the GPU Helm
+		 * @param thread_id identity of running thread
+		 * @param len       number of packets to enqueue
+		 * @param task      incoming packet to process
+		 *                  the packet buffer are allocated from within CPU worker from the memory pool
+		 *                  ownership is transferred to GPU-helm - will be freed after DMA to GPU.
+		 * @return    0   if submission was successful
+		 *            NUM if NUM packets were left out due to space issues
+		 */
+		unsigned int submit_rx(router_thread_ident thread_id, size_t len, struct rte_mbuf *const *task);
 
 		/**
 		 * GPU main event loop
 		 * @param stop     terminate when stop is true
-		 * @param r        the router where output should be delivered to
 		 */
 		void gpu_helm_event_loop(const volatile bool *stop);
 
@@ -69,7 +80,13 @@ namespace GAPPP {
 		}
 
 	private:
-		int gpu_minion_thread();
+		/**
+		 * Launch a GPU asynchronous task to process nbr_tasks packets, referred as pointers in packets.
+		 * @param nbr_tasks
+		 * @param packets
+		 * @return
+		 */
+		int gpu_minion_thread(unsigned int nbr_tasks, std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST> &packets);
 	};
 
 } // GAPPP
