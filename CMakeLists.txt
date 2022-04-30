@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(gappp)
+project(gappp LANGUAGES C CXX CUDA)
 set(SOVERSION 0)
 set(VERSION ${SOVERSION}.0.1)
 
@@ -54,4 +54,3 @@ add_subdirectory(cuda-src)
 
 add_subdirectory(src)
 set(gappp::libgappp libgappp ALIAS)
-target_link_libraries(libgappp PRIVATE )
