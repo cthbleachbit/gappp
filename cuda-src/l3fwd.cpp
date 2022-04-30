@@ -29,6 +29,7 @@ namespace GAPPP {
 			float b[4] = {1.0f, 3.0f, 5.0f, 7.0f};;
 			float c[4];
 			VecAdd<<<1, 4>>>(a, b, c);
+			return 0;
 		}
 	}
 }
