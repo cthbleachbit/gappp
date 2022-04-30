@@ -87,6 +87,11 @@ int main(int argc, char **argv) {
 	router->dev_probe(0);
 
 	// TODO: Start event loop
+	r_thread = std::async(std::launch::async, [&stop, router] {router->launch_threads(&stop);});
+	g_thread = std::async(std::launch::async, [&stop, helm] {helm->gpu_helm_event_loop(&stop);});
+
+	r_thread.wait();
+	g_thread.wait();
 
 	// END
 	delete router;
