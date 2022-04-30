@@ -15,6 +15,7 @@
 #endif
 
 #include "types.h"
+#include "l3fwd.h"
 
 namespace GAPPP {
 	namespace l3fwd {
@@ -23,7 +24,7 @@ namespace GAPPP {
 			C[i] = A[i] + B[i];
 		}
 
-		int invoke() {
+		int invoke(unsigned int nbr_tasks, struct rte_mbuf **packets) {
 			float a[4] = {1.0f, 3.0f, 5.0f, 7.0f};
 			float b[4] = {1.0f, 3.0f, 5.0f, 7.0f};;
 			float c[4];
