@@ -11,11 +11,8 @@
 namespace GAPPP {
 	GPUHelm::GPUHelm() {
 		// Do a GPU quick self test
-		int32_t selftest_ret = GAPPP::selftest::invoke(0, nullptr);
-		if (selftest_ret != 255) {
-			whine(Severity::CRIT,
-			      fmt::format("GPU couldn't execute simple vector add - wrong result {}", selftest_ret),
-			      GAPPP_LOG_GPU_HELM);
+		if (GAPPP::selftest::invoke(0, nullptr) != 0) {
+			whine(Severity::CRIT, "GPU Self test failed", GAPPP_LOG_GPU_HELM);
 		}
 
 		ring_tasks = rte_ring_create("GPUHelmRingTask", GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT, 0, RING_F_SC_DEQ);
