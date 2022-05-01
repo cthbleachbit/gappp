@@ -2,8 +2,8 @@
 // Created by cth451 on 22-4-17.
 //
 
-#include "Router.h"
 #include "Logging.h"
+#include "components.h"
 
 #include <fmt/format.h>
 #include <random>
@@ -136,7 +136,7 @@ namespace GAPPP {
 
 		unsigned int lcore_id;
 		uint64_t prev_tsc, diff_tsc, cur_tsc;
-		int i, nb_rx
+		int i, nb_rx;
 		unsigned int nb_tx;
 		unsigned int ret;
 		uint8_t portid, queueid;
@@ -168,7 +168,7 @@ namespace GAPPP {
 			nb_rx = rte_eth_rx_burst(portid, queueid, rx_burst.data(),
 			                         GAPPP_BURST_MAX_PACKET);
 			if (nb_rx != 0) {
-				this->g->submit_rx(ident, rx_burst.data(), nb_rx);
+				this->g->submit_rx(ident, nb_rx, rx_burst.data());
 				// CPU only implementation at https://github.com/ceph/dpdk/blob/master/examples/l3fwd/l3fwd_lpm_sse.h
 			}
 

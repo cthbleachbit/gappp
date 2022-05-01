@@ -1,15 +1,9 @@
 //
-// Created by cth451 on 22-4-17.
+// Created by cth451 on 22-4-30.
 //
 
-/**
- * Abstraction for a router node.
- *
- * Useful links to dpdk: https://doc.dpdk.org/api/rte__ethdev_8h.html
- */
-
-#ifndef ROUTER_H
-#define ROUTER_H
+#ifndef GAPPP_COMPONENTS
+#define GAPPP_COMPONENTS
 
 #include <rte_dev.h>
 #include <rte_ethdev.h>
@@ -41,13 +35,26 @@
 #define GAPPP_MEMPOOL_CACHE_SIZE 256
 // Memory pool size
 #define GAPPP_MEMPOOL_PACKETS ((1 << 16) - 1)
-// Logging identifier
+// Router Logging identifier
 #define GAPPP_LOG_ROUTER "Router"
 
-namespace GAPPP {
+// Slots to reserve in the ring_tasks buffer
+#define GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT 64
+// Number of tasks to dequeue in one shot
+#define GAPPP_GPU_HELM_TASK_BURST 4U
+// Preallocate minion asynchronous results
+#define GAPPP_GPU_FUTURE_PREALLOCATE 10
+// GPU logging identifier
+#define GAPPP_LOG_GPU_HELM "GPU Helm"
 
-	// Forward declaration
+// FORWARD DECLARATION
+
+namespace GAPPP {
+	class Router;
 	class GPUHelm;
+}
+
+namespace GAPPP {
 
 	// DATA STRUCTURES
 	struct router_thread_ident {
@@ -180,4 +187,75 @@ struct fmt::formatter<GAPPP::router_thread_ident> {
 	}
 };
 
-#endif //ROUTER_H
+namespace GAPPP {
+
+	class GPUHelm {
+		// Incoming buffers - CPU workers will submit_rx tasks to this ring buffer
+		// Note that this buffer is multi-producer/single-consumer.
+		struct rte_ring *ring_tasks = nullptr;
+		// GPU threads will place finished data here
+		// Note tha this buffer is multi-producer(running)/multi-consumer(passed directly to NIC workers)
+		struct rte_ring *ring_completion = nullptr;
+		// Outstanding GPU threads
+		std::vector<std::shared_future<int>> running;
+
+		// Pointer to initialized router instance - ownership is borrowed (i.e. not to be freed)
+		Router *r = nullptr;
+
+	public:
+		/**
+		 * Construct a GPU helm and allocate associated message ring buffers
+		 */
+		GPUHelm();
+
+		/**
+		 * Free the associated data structures
+		 */
+		~GPUHelm();
+
+		/**
+		 * Submit tasks to the GPU Helm
+		 * @param thread_id identity of running thread
+		 * @param task      incoming packet to process
+		 *                  the packet buffer are allocated from within CPU worker from the memory pool
+		 *                  ownership is transferred to GPU-helm - will be freed after DMA to GPU.
+		 * @return    0 if submission was successful
+		 */
+		unsigned int submit_rx(router_thread_ident thread_id, router_thread_local_mbuf *task);
+
+		/**
+		 * Submit tasks to the GPU Helm
+		 * @param thread_id identity of running thread
+		 * @param len       number of packets to enqueue
+		 * @param task      incoming packet to process
+		 *                  the packet buffer are allocated from within CPU worker from the memory pool
+		 *                  ownership is transferred to GPU-helm - will be freed after DMA to GPU.
+		 * @return    0   if submission was successful
+		 *            NUM if NUM packets were left out due to space issues
+		 */
+		unsigned int submit_rx(router_thread_ident thread_id, size_t len, struct rte_mbuf *const *task);
+
+		/**
+		 * GPU main event loop
+		 * @param stop     terminate when stop is true
+		 */
+		void gpu_helm_event_loop(const volatile bool *stop);
+
+		void inline assign_router(Router *r) {
+			this->r = r;
+		}
+
+	private:
+		/**
+		 * Launch a GPU asynchronous task to process nbr_tasks packets, referred as pointers in packets.
+		 * @param nbr_tasks
+		 * @param packets
+		 * @return
+		 */
+		int
+		gpu_minion_thread(unsigned int nbr_tasks, std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST> &packets);
+	};
+
+}
+
+#endif //COMPONENTS_H

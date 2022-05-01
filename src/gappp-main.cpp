@@ -9,8 +9,7 @@
 #include <future>
 
 #include "Logging.h"
-#include "Router.h"
-#include "GPUHelm.h"
+#include "components.h"
 
 /*
  * Notes: DPDK parameters must be placed before program parameters
