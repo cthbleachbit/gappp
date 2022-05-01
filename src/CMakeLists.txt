@@ -1,4 +1,4 @@
-set(LIBGAPPP_SOURCES Router.cpp Logging.h GPUHelm.cpp RouteTable.h RouteTable.cpp)
+set(LIBGAPPP_SOURCES Router.cpp GPUHelm.cpp RouteTable.h RouteTable.cpp)
 
 add_library(libgappp SHARED ${LIBGAPPP_SOURCES})
 set_target_properties(libgappp PROPERTIES OUTPUT_NAME gappp)

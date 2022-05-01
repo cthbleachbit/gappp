@@ -54,10 +54,14 @@ namespace GAPPP {
 
 			auto va = new aligned_vec128<double>(); // 4K aligned allocation
 			double *da; // GPU memory pointer - not valid under CPU content
+
+			// Maps va->v into GPU memory space
 			ret = cudaHostRegister(va->v, 128 * sizeof(double), cudaHostRegisterMapped);
 			if (ret < 0) {
 				whine(Severity::CRIT, "Failed to map from host memory", GAPPP_LOG_SELFTEST);
 			}
+
+			// Obtain memory pointers in GPU memory space - this pointer will be passed to CUDA kernel routines
 			ret = cudaHostGetDevicePointer((void **) &da, (void *)va->v, 0);
 			if (ret < 0) {
 				whine(Severity::CRIT, "Failed to obtain mapped GPU memory address", GAPPP_LOG_SELFTEST);
