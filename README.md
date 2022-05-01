@@ -39,6 +39,7 @@ Use the following cmake parameters:
 cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja \
   -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.6 \
   -DCMAKE_C_COMPILER=/usr/bin/gcc-11 \
+  -DCMAKE_CUDA_COMPILER=/usr/local/cuda-11.6/bin/nvcc \
   -DCMAKE_CXX_COMPILER=/usr/bin/g++-11 \
   ..
 ```
