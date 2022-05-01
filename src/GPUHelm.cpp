@@ -7,6 +7,14 @@
 
 #include "l3fwd.h"
 #include "selftest.h"
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include "RouteTable.h"
+using std::cout; using std::cerr;
+using std::endl; using std::string;
+using std::ifstream; using std::vector;
+
 
 namespace GAPPP {
 	GPUHelm::GPUHelm() {
@@ -28,6 +36,19 @@ namespace GAPPP {
 		running.reserve(GAPPP_GPU_FUTURE_PREALLOCATE);
 
 		// TODO: Transfer routing table into GPU?
+		string filename("~/GAPPP/test-inputs/simple-routes");
+
+		ifstream input_file(filename);
+                if (!input_file.is_open()) {
+       			 cerr << "Could not open the file - '"<< filename << "'" << endl;
+    		}
+
+	       routing_table table;
+	       table  = GAPPP::parse_table(input_file);
+
+	       GAPPP::printTablePrinter(table,cout);
+
+
 	}
 
 	GPUHelm::~GPUHelm() {
