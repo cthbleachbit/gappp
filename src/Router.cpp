@@ -191,7 +191,11 @@ namespace GAPPP {
 		}
 	}
 
-	void Router::submit_tx(uint16_t port_id, struct router_thread_local_mbuf *buf) {
+	unsigned int Router::submit_tx(uint16_t port_id, struct router_thread_local_mbuf *buf) {
+		return submit_tx(port_id, buf->len, buf->m_table);
+	}
+
+	unsigned int Router::submit_tx(uint16_t port_id, size_t len, struct rte_mbuf *const *packets) {
 		std::uniform_int_distribution<uint16_t> dist(1, GAPPP_DEFAULT_TX_QUEUE);
 		uint16_t queue = dist(this->rng_engine);
 		struct rte_ring *tx_ring = nullptr;
@@ -201,10 +205,11 @@ namespace GAPPP {
 		} catch (std::out_of_range &e) {
 			whine(Severity::CRIT, fmt::format("No TX buffer allocated for {}", id), GAPPP_LOG_ROUTER);
 		};
-		int ret = rte_ring_enqueue(tx_ring, buf);
-		if (ret < 0) {
-			whine(Severity::CRIT, fmt::format("Enqueueing TX buffer for {} failed with {}", id, ret), GAPPP_LOG_ROUTER);
+		unsigned int ret = rte_ring_enqueue_burst(tx_ring, reinterpret_cast<void *const *>(packets), len, nullptr);
+		if (ret < len) {
+			whine(Severity::WARN, fmt::format("TX buffer {}: {} enqueue requested > {} enqueued", id, len, ret), GAPPP_LOG_ROUTER);
 		}
+		return len - ret;
 	}
 
 	Router::Router(std::default_random_engine &rng_engine) noexcept :

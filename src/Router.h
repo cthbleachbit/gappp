@@ -63,7 +63,7 @@ namespace GAPPP {
 		};
 
 		inline std::strong_ordering operator<=>(const struct router_thread_ident &rhs) const {
-			if (auto cmp = this->port <=> rhs.port; cmp !=0) {
+			if (auto cmp = this->port <=> rhs.port; cmp != 0) {
 				return cmp;
 			}
 			return this->queue <=> rhs.queue;
@@ -92,7 +92,7 @@ namespace GAPPP {
 	 */
 	class Router {
 	private:
-		std::default_random_engine& rng_engine;
+		std::default_random_engine &rng_engine;
 		GPUHelm *g;
 	public:
 		// Set of ports. Use rte_eth_dev_info_get to obtain rte_eth_dev_info
@@ -105,9 +105,9 @@ namespace GAPPP {
 		// This should be allocated during router construction
 		std::array<struct rte_mempool *, RTE_MAX_ETHPORTS> packet_memory_pool{};
 		// Ring buffers per worker
-		std::unordered_map<router_thread_ident, struct rte_ring*, router_thread_ident::hash> ring_tx;
+		std::unordered_map<router_thread_ident, struct rte_ring *, router_thread_ident::hash> ring_tx;
 
-		explicit Router(std::default_random_engine& rng_engine) noexcept;
+		explicit Router(std::default_random_engine &rng_engine) noexcept;
 		~Router() = default;
 
 		/**
@@ -135,10 +135,18 @@ namespace GAPPP {
 
 		/**
 		 * Submit processed packets for transmission
-		 * @param port_id
-		 * @param buf
+		 * @param port_id  port to transmit on
+		 * @param buf      contents to transmit
 		 */
-		void submit_tx(uint16_t port_id, struct router_thread_local_mbuf *buf);
+		unsigned int submit_tx(uint16_t port_id, struct router_thread_local_mbuf *buf);
+
+		/**
+		 * Submit processed packets for transmission
+		 * @param port_id  port to transmit on
+		 * @param len      number of packets
+		 * @param packets  pointers to packet data to transmit
+		 */
+		unsigned int submit_tx(uint16_t port_id, size_t len, struct rte_mbuf *const *packets);
 
 		/**
 		 * Assign GPU helm to router
@@ -157,15 +165,16 @@ namespace GAPPP {
 
 } // GAPPP
 
-template <> struct fmt::formatter<GAPPP::router_thread_ident> {
+template<>
+struct fmt::formatter<GAPPP::router_thread_ident> {
 	constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
 		auto it = ctx.begin(), end = ctx.end();
 		if (it != end && *it != '}') throw format_error("invalid format");
 		return it;
 	}
 
-	template <typename FormatContext>
-	auto format(const GAPPP::router_thread_ident& id, FormatContext& ctx) -> decltype(ctx.out()) {
+	template<typename FormatContext>
+	auto format(const GAPPP::router_thread_ident &id, FormatContext &ctx) -> decltype(ctx.out()) {
 		// ctx.out() is an output iterator to write to.
 		return format_to(ctx.out(), "eth{}/worker{}", id.port, id.queue);
 	}
