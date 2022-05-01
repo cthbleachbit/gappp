@@ -186,6 +186,8 @@ namespace GAPPP {
 				}
 			}
 		}
+
+		whine(Severity::INFO, "Terminating", GAPPP_LOG_ROUTER);
 	}
 
 	void Router::allocate_packet_memory_buffer(unsigned int n_packet, uint16_t port) {

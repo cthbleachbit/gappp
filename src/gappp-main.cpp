@@ -26,7 +26,7 @@ namespace GAPPP {
 	 * C-style signal handler wrapper
 	 * @param signum
 	 */
-	static void	signal_handler(int signum) {
+	static void signal_handler(int signum) {
 		shutdown_handler(signum);
 	}
 };
@@ -47,12 +47,6 @@ int main(int argc, char **argv) {
 		if (signum == SIGINT || signum == SIGTERM) {
 			GAPPP::whine(GAPPP::Severity::INFO, fmt::format("Signal {} received, preparing to exit", signum), "Main");
 			stop = true;
-			while(r_thread.wait_for(5s) != std::future_status::ready) {
-				GAPPP::whine(GAPPP::Severity::INFO, "Waiting for router event loop to exit", "Main");
-			};
-			while(g_thread.wait_for(5s) != std::future_status::ready) {
-				GAPPP::whine(GAPPP::Severity::INFO, "Waiting for gpu event loop to exit", "Main");
-			};
 		}
 	};
 
@@ -86,11 +80,18 @@ int main(int argc, char **argv) {
 	router->dev_probe(0);
 
 	// TODO: Start event loop
-	r_thread = std::async(std::launch::async, [&stop, router] {router->launch_threads(&stop);});
-	g_thread = std::async(std::launch::async, [&stop, helm] {helm->gpu_helm_event_loop(&stop);});
+	r_thread = std::async(std::launch::async, [&stop, router] { router->launch_threads(&stop); });
+	g_thread = std::async(std::launch::async, [&stop, helm] { helm->gpu_helm_event_loop(&stop); });
 
-	r_thread.wait();
-	g_thread.wait();
+	{
+		using namespace std::chrono_literals;
+		while (r_thread.wait_for(5s) != std::future_status::ready) {
+			if (stop) GAPPP::whine(GAPPP::Severity::INFO, "Waiting for router event loop to exit", "Main");
+		};
+		while (g_thread.wait_for(5s) != std::future_status::ready) {
+			if (stop) GAPPP::whine(GAPPP::Severity::INFO, "Waiting for gpu event loop to exit", "Main");
+		};
+	}
 
 	// END
 	delete router;

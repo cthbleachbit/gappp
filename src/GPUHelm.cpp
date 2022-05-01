@@ -83,6 +83,8 @@ namespace GAPPP {
 				this->running.erase(future);
 			}
 		}
+
+		whine(Severity::INFO, "Terminating", GAPPP_LOG_GPU_HELM);
 	}
 
 	int GPUHelm::gpu_minion_thread(unsigned int nbr_tasks,
