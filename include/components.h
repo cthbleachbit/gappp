@@ -100,7 +100,7 @@ namespace GAPPP {
 	class Router {
 	private:
 		std::default_random_engine &rng_engine;
-		GPUHelm *g;
+		GPUHelm *g = nullptr;
 	public:
 		// Set of ports. Use rte_eth_dev_info_get to obtain rte_eth_dev_info
 		std::unordered_set<uint16_t> ports{};
@@ -159,7 +159,9 @@ namespace GAPPP {
 		 * Assign GPU helm to router
 		 * @param helm
 		 */
-		void assign_gpu_helm(GPUHelm *helm) noexcept;
+		inline void assign_gpu_helm(GPUHelm *helm) noexcept {
+			this->g = helm;
+		}
 
 	protected:
 		/**
@@ -241,8 +243,8 @@ namespace GAPPP {
 		 */
 		void gpu_helm_event_loop(const volatile bool *stop);
 
-		void inline assign_router(Router *r) {
-			this->r = r;
+		void inline assign_router(Router *router) {
+			this->r = router;
 		}
 
 	private:

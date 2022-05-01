@@ -29,9 +29,9 @@ namespace GAPPP {
 		int ret_val;
 		uint16_t nb_rxd = GAPPP_DEFAULT_RX_DESC;
 		uint16_t nb_txd = GAPPP_DEFAULT_TX_DESC;
-		struct rte_eth_dev_info dev_info;
-		struct rte_eth_rxconf rxq_conf;
-		struct rte_eth_txconf txq_conf;
+		struct rte_eth_dev_info dev_info{};
+		struct rte_eth_rxconf rxq_conf{};
+		struct rte_eth_txconf txq_conf{};
 		auto local_port_conf = port_conf;
 
 		if (!rte_eth_dev_is_valid_port(port_id))
@@ -179,6 +179,11 @@ namespace GAPPP {
 			                               nullptr);
 			if (nb_tx > 0) {
 				ret = rte_eth_tx_burst(portid, queueid, tx_burst.data(), nb_tx);
+				if (ret < nb_tx) {
+					whine(Severity::WARN,
+					      fmt::format("Worker {} submitted {} packets for TX but only {} were sent", ident, nb_tx, ret),
+					      GAPPP_LOG_ROUTER);
+				}
 			}
 		}
 	}
@@ -229,7 +234,4 @@ namespace GAPPP {
 		:
 		rng_engine(rng_engine) {}
 
-	void Router::assign_gpu_helm(GPUHelm *helm) noexcept {
-		this->g = helm;
-	}
 } // GAPPP
