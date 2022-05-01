@@ -131,15 +131,4 @@ namespace GAPPP {
 		return routes;
 	}
 
-	void printTablePrinter(const routing_table& table, std::ostream &os = std::cout) {
-		std::string header = "Network   Mask  Gate    Port";
-		std::cout << header << std::endl;
-		for (const auto &route: table) {
-			os << route.network << " ";
-			os << route.mask << " ";
-			os << route.gateway << " ";
-			os << route.out_port << std::endl;//<< mask << gate<< port << endl;
-		}
-
-	}
 }
