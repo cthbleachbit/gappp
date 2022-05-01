@@ -16,26 +16,21 @@ namespace GAPPP {
 	namespace selftest {
 		static int device_id = -1;
 
-		__global__ void VecAdd(double *A, double *B, double *C) {
-			int i = threadIdx.x;
-			C[i] = A[i] + B[i];
-		}
-
 		__global__ void GenVec(double base, double*A) {
 			int i = threadIdx.x;
 			A[i] = pow(2, base + 2 * i);
 		}
 
 		template<typename T>
-		struct aligned_vec4 {
-			alignas(4096) T v[4];
+		struct aligned_vec128 {
+			alignas(4096) T v[128];
 		};
 
 		// Mapping CPU memory to GPU:
 		// https://github.com/NVIDIA/cuda-samples/blob/master/Samples/0_Introduction/simpleZeroCopy/simpleZeroCopy.cu
 		int invoke(unsigned int nbr_tasks, struct rte_mbuf **packets) {
 			int device_count = 0;
-			cudaDeviceProp deviceProp;
+			cudaDeviceProp device_properties{};
 
 			cudaError_t ret = cudaGetDeviceCount(&device_count);
 			if (device_count < 0) {
@@ -45,19 +40,21 @@ namespace GAPPP {
 			}
 			device_id = 0;
 			cudaSetDevice(device_id);
-			ret = cudaGetDeviceProperties(&deviceProp, device_id);
+			ret = cudaGetDeviceProperties(&device_properties, device_id);
 			if (ret < 0) {
 				whine(Severity::CRIT, "Failed to obtain CUDA device properties", GAPPP_LOG_SELFTEST);
 			}
+
+			whine(Severity::INFO, fmt::format("Using CUDA device {}", device_properties.name), GAPPP_LOG_SELFTEST);
 
 			ret = cudaSetDeviceFlags(cudaDeviceMapHost);
 			if (ret < 0) {
 				whine(Severity::CRIT, "Device does not support mapping from host memory", GAPPP_LOG_SELFTEST);
 			}
 
-			auto va = new aligned_vec4<double>(); // 4K aligned allocation
+			auto va = new aligned_vec128<double>(); // 4K aligned allocation
 			double *da; // GPU memory pointer - not valid under CPU content
-			ret = cudaHostRegister(va->v, 4 * sizeof(double), cudaHostRegisterMapped);
+			ret = cudaHostRegister(va->v, 128 * sizeof(double), cudaHostRegisterMapped);
 			if (ret < 0) {
 				whine(Severity::CRIT, "Failed to map from host memory", GAPPP_LOG_SELFTEST);
 			}
@@ -67,7 +64,7 @@ namespace GAPPP {
 			}
 
 			dim3 block(256);
-			dim3 grid((unsigned int)ceil(4 / (float)block.x));
+			dim3 grid((unsigned int)ceil(128 / (float)block.x));
 			GenVec<<<grid, block>>>(0, da);
 			cudaDeviceSynchronize();
 			ret = cudaGetLastError();
@@ -76,7 +73,10 @@ namespace GAPPP {
 			}
 
 			// Compare results
-			return (va->v[0] == 1.0f && va->v[1] == 4.0f) ? 0 : -1;
+			bool results = va->v[0] == 1.0f && va->v[1] == 4.0f;
+			delete va;
+
+			return results ? 0 : -1;
 		}
 	}
 }

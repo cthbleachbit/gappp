@@ -13,6 +13,8 @@ namespace GAPPP {
 		// Do a GPU quick self test
 		if (GAPPP::selftest::invoke(0, nullptr) != 0) {
 			whine(Severity::CRIT, "GPU Self test failed", GAPPP_LOG_GPU_HELM);
+		} else {
+			whine(Severity::INFO, "GPU Self test completed", GAPPP_LOG_GPU_HELM);
 		}
 
 		ring_tasks = rte_ring_create("GPUHelmRingTask", GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT, 0, RING_F_SC_DEQ);
