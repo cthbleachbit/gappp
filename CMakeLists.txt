@@ -18,7 +18,7 @@ set_property(GLOBAL PROPERTY POSITION_INDEPENDENT_CODE ON)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cuda.cmake)
 
 # CUDA
-set(GAPPP_CUDA_BINARIES_ARCH sm_60 sm_61 sm_62 sm_70 sm_72 sm_75 sm_80 sm_86 sm_87 CACHE STRING "CUDA architectures to build binaries for")
+set(CMAKE_CUDA_ARCHITECTURES 70 72 75 80 86 87)
 find_package(CUDA)
 
 # DPDK
