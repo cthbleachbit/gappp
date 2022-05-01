@@ -160,7 +160,7 @@ namespace GAPPP {
 		unsigned int submit_tx(uint16_t port_id, size_t len, struct rte_mbuf *const *packets);
 
 		/**
-		 * Assign GPU helm to router
+		 * Assign GPU helm to router - helm will be used to submit RX'd packets
 		 * @param helm
 		 */
 		inline void assign_gpu_helm(GPUHelm *helm) noexcept {
@@ -169,15 +169,16 @@ namespace GAPPP {
 
 	protected:
 		/**
-		 * Allocate packet memory buffer for port
+		 * Allocate packet memory buffer for a single port
 		 * @param n_packet Number of packets to allocate for each port
 		 * @param port     Port (NIC) to allocate memory for
 		 */
 		void allocate_packet_memory_buffer(unsigned int n_packet, uint16_t port);
 	};
 
-} // GAPPP
+} // namespace GAPPP
 
+// Formatter for thread identifier
 template<>
 struct fmt::formatter<GAPPP::router_thread_ident> {
 	constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {

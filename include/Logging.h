@@ -2,8 +2,8 @@
 // Created by cth451 on 22-4-17.
 //
 
-#ifndef LOGGING_H
-#define LOGGING_H
+#ifndef GAPPP_LOGGING
+#define GAPPP_LOGGING
 
 #include <iostream>
 #include <string>
@@ -24,6 +24,7 @@ namespace GAPPP {
 			case Severity::WARN:
 				return "WARN";
 			case Severity::CRIT:
+			default:
 				return "CRIT";
 		}
 	}
