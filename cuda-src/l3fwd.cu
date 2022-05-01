@@ -14,7 +14,7 @@
 #define __global__
 #endif
 
-#include "types.h"
+#include "gappp_types.h"
 #include "l3fwd.h"
 
 namespace GAPPP {

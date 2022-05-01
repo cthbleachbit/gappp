@@ -7,6 +7,8 @@
 
 #include <vector>
 #include <cstdint>
+#include <functional>
+#include <rte_mbuf.h>
 
 /**
  * See https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY.html on efficient data structure copying
@@ -32,6 +34,8 @@ namespace GAPPP {
 		uint16_t buf_len;
 		unsigned char *buf;
 	};
+
+	typedef std::function<int(unsigned int, struct rte_mbuf **)> cuda_module_t;
 }
 
 #endif //GAPPP_TYPES

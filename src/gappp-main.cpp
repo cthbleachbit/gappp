@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
 	/**
 	 * Actual shutdown handler - issue stop
 	 */
-	GAPPP::shutdown_handler = [&stop, &r_thread, &g_thread](int signum) {
+	GAPPP::shutdown_handler = [&stop](int signum) {
 		using namespace std::chrono_literals;
 		if (signum == SIGINT || signum == SIGTERM) {
 			GAPPP::whine(GAPPP::Severity::INFO, fmt::format("Signal {} received, preparing to exit", signum), "Main");
@@ -71,7 +71,6 @@ int main(int argc, char **argv) {
 	helm = new GAPPP::GPUHelm();
 
 	// TODO: Create router instance
-	struct rte_mempool pool{};
 	router = new GAPPP::Router(rng_engine);
 	// Link router to GPU helm
 	helm->assign_router(router);
