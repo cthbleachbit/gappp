@@ -153,6 +153,7 @@ namespace GAPPP {
 		// Wait for workers to exit
 		for (auto worker : this->workers) {
 			rte_eal_wait_lcore(worker.second);
+			this->workers.erase(worker.first);
 		}
 	}
 
@@ -238,7 +239,7 @@ namespace GAPPP {
 			}
 		}
 
-		whine(Severity::INFO, "Terminating", GAPPP_LOG_ROUTER);
+		whine(Severity::INFO, fmt::format("Worker {} - Terminating", ident), GAPPP_LOG_ROUTER);
 	}
 
 	void Router::allocate_packet_memory_buffer(unsigned int n_packet, uint16_t port) {
@@ -287,4 +288,21 @@ namespace GAPPP {
 		:
 		rng_engine(rng_engine) {}
 
+	Router::~Router() noexcept {
+		int ret;
+		// Deallocate ring buffers
+		for (auto port : this->ports) {
+			whine(Severity::INFO, fmt::format("Stopping port {}", port), GAPPP_LOG_ROUTER);
+			rte_eth_dev_stop(port);
+			for (uint16_t i = 0; i < GAPPP_ROUTER_THREADS_PER_PORT; i++) {
+				rte_ring_free(this->ring_tx[{port, i}]);
+			}
+		}
+
+		// Clean up all devices and memory pools
+		for (auto port : this->ports) {
+			whine(Severity::INFO, fmt::format("Releasing memory pool for {}", port), GAPPP_LOG_ROUTER);
+			rte_mempool_free(packet_memory_pool[port]);
+		}
+	}
 } // GAPPP

@@ -119,7 +119,7 @@ namespace GAPPP {
 		std::unordered_map<router_thread_ident, struct rte_ring *, router_thread_ident::hash> ring_tx;
 
 		explicit Router(std::default_random_engine &rng_engine) noexcept;
-		~Router() = default;
+		~Router() noexcept;
 
 		/**
 		 * initialize an ethernet device
