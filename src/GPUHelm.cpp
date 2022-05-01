@@ -68,6 +68,8 @@ namespace GAPPP {
 		std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST> local_completion{};
 		int nbr_local_tasks = 0;
 
+		whine(Severity::INFO, "Entering event loop", GAPPP_LOG_GPU_HELM);
+
 		while (!*stop) {
 			nbr_local_tasks = rte_ring_dequeue_bulk(this->ring_tasks,
 			                                        (void **) local_tasks.data(),

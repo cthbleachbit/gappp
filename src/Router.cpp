@@ -86,6 +86,26 @@ namespace GAPPP {
 			whine(Severity::CRIT,
 			      fmt::format("port {}: TX queue 0 setup failed (res={})", port_id, ret_val),
 			      GAPPP_LOG_ROUTER);
+		// Allocate TX ring buffers for workers
+		for (uint16_t i = 0; i < GAPPP_ROUTER_THREADS_PER_PORT; i++) {
+			struct router_thread_ident ident{port_id, i};
+			if (likely(!this->ring_tx.contains(ident))) {
+				std::string name = fmt::format("TX ring {}", ident);
+				this->ring_tx[ident] = rte_ring_create(name.c_str(), GAPPP_BURST_RING_SIZE, 0, RING_F_SC_DEQ);
+				if (unlikely(!this->ring_tx[ident])) {
+					whine(Severity::CRIT,
+					      fmt::format("TX ring for worker {} allocation failed with {} - {}",
+					                  ident,
+					                  rte_errno,
+					                  rte_strerror(rte_errno)),
+					      GAPPP_LOG_ROUTER);
+				} else {
+					whine(Severity::INFO,
+					      fmt::format("TX ring for worker {} allocated", ident),
+					      GAPPP_LOG_ROUTER);
+				}
+			}
+		}
 
 		// Start the port
 		ret_val = rte_eth_dev_start(port_id);
@@ -106,11 +126,34 @@ namespace GAPPP {
 		return true;
 	}
 
+	struct router_worker_launch_parameter {
+		Router *r;
+		volatile bool *stop;
+		struct router_thread_ident id;
+	};
+
+	static int router_worker_launch(void *ptr) {
+		auto parameters = (router_worker_launch_parameter *) (ptr);
+		parameters->r->port_queue_event_loop(parameters->id, nullptr, parameters->stop);
+		return 0;
+	}
+
 	void Router::launch_threads(volatile bool *stop) {
-		// TODO: create and start threads
-		// TODO: bind threads to cores
-		// TODO: block on keyboard input
-		// TODO: request threads to quit
+		const int worker_id_offset = 6;
+		// Spawn workers
+		for (auto port : this->ports) {
+			for (uint16_t i = 0; i < GAPPP_ROUTER_THREADS_PER_PORT; i++) {
+				struct router_worker_launch_parameter param{.r = this, .stop = stop, .id = {port, i}};
+				int worker_number = worker_id_offset + port * GAPPP_ROUTER_THREADS_PER_PORT + i;
+				rte_eal_remote_launch(router_worker_launch, &param, worker_number);
+				this->workers[param.id] = worker_number;
+			}
+		}
+
+		// Wait for workers to exit
+		for (auto worker : this->workers) {
+			rte_eal_wait_lcore(worker.second);
+		}
 	}
 
 	static inline int
@@ -146,22 +189,16 @@ namespace GAPPP {
 		prev_tsc = 0;
 		lcore_id = rte_lcore_id();
 
+		// Check if queues are ready
+		if (!this->ring_tx.contains(ident)) {
+			whine(Severity::CRIT, fmt::format("Worker {} - TX queue isn't initialized", ident), GAPPP_LOG_ROUTER);
+		}
+
 		whine(Severity::INFO,
-		      fmt::format("Entering main loop: lcore={}, port={}, rx queue={}", lcore_id, ident.port, ident.queue));
+		      fmt::format("Worker {} - Entering main loop @ lcore={}", ident, lcore_id), GAPPP_LOG_ROUTER);
+
 
 		while (!*stop) {
-			cur_tsc = rte_rdtsc();
-
-			/*
-			 * TX burst queue drain
-			 */
-			diff_tsc = cur_tsc - prev_tsc;
-			if (unlikely(diff_tsc > drain_tsc)) {
-				send_burst(buf, buf->len, portid);
-				buf->len = 0;
-				prev_tsc = cur_tsc;
-			}
-
 			/*
 			 * Read packet from RX queues
 			 */
@@ -172,18 +209,32 @@ namespace GAPPP {
 				// CPU only implementation at https://github.com/ceph/dpdk/blob/master/examples/l3fwd/l3fwd_lpm_sse.h
 			}
 
-			// Handle TX
-			nb_tx = rte_ring_dequeue_burst(this->ring_tx.at(ident),
-			                               reinterpret_cast<void **>(tx_burst.data()),
-			                               GAPPP_BURST_MAX_PACKET,
-			                               nullptr);
-			if (nb_tx > 0) {
-				ret = rte_eth_tx_burst(portid, queueid, tx_burst.data(), nb_tx);
-				if (ret < nb_tx) {
-					whine(Severity::WARN,
-					      fmt::format("Worker {} submitted {} packets for TX but only {} were sent", ident, nb_tx, ret),
-					      GAPPP_LOG_ROUTER);
+			/*
+			 * TX burst queue drain
+			 */
+			cur_tsc = rte_rdtsc();
+			diff_tsc = cur_tsc - prev_tsc;
+			if (unlikely(diff_tsc > drain_tsc)) {
+				nb_tx = rte_ring_dequeue_burst(this->ring_tx.at(ident),
+				                               reinterpret_cast<void **>(tx_burst.data()),
+				                               GAPPP_BURST_MAX_PACKET,
+				                               nullptr);
+				if (nb_tx > 0) {
+					ret = rte_eth_tx_burst(portid, queueid, tx_burst.data(), nb_tx);
+					if (unlikely(ret < nb_tx)) {
+						whine(Severity::WARN,
+						      fmt::format("Worker {} submitted {} packets for TX but only {} were sent",
+						                  ident,
+						                  nb_tx,
+						                  ret),
+						      GAPPP_LOG_ROUTER);
+						do {
+							rte_pktmbuf_free(tx_burst[ret]);
+						}
+						while (++ret < nb_tx);
+					}
 				}
+				prev_tsc = cur_tsc;
 			}
 		}
 

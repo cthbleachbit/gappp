@@ -29,12 +29,16 @@
 #define GAPPP_MAX_CPU 64
 // Burst - batching packet TX
 #define GAPPP_BURST_MAX_PACKET 32
+// Burst - total ring size
+#define GAPPP_BURST_RING_SIZE 128
 // Burst - drain period in units of microseconds
 #define GAPPP_BURST_TX_DRAIN_US 100
 // ???
 #define GAPPP_MEMPOOL_CACHE_SIZE 256
 // Memory pool size
 #define GAPPP_MEMPOOL_PACKETS ((1 << 16) - 1)
+// Router worker threads count
+#define GAPPP_ROUTER_THREADS_PER_PORT 4
 // Router Logging identifier
 #define GAPPP_LOG_ROUTER "Router"
 
@@ -105,7 +109,7 @@ namespace GAPPP {
 		// Set of ports. Use rte_eth_dev_info_get to obtain rte_eth_dev_info
 		std::unordered_set<uint16_t> ports{};
 		// Maps <port number, queue_id> to worker watching on
-		std::unordered_map<router_thread_ident, std::shared_future<void>, router_thread_ident::hash> workers;
+		std::unordered_map<router_thread_ident, decltype(rte_lcore_id()), router_thread_ident::hash> workers;
 		// Allocate workers to CPUs as we go
 		std::array<router_thread_ident, GAPPP_MAX_CPU> workers_affinity{};
 		// Pointers to per-NIC packet buffers, can be made NUMA aware but assuming 1 socket here.
