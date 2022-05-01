@@ -35,9 +35,15 @@ namespace GAPPP {
 	unsigned int GPUHelm::submit_rx(router_thread_ident thread_id, size_t len, struct rte_mbuf *const *task) {
 		unsigned int ret;
 		ret = rte_ring_enqueue_burst(this->ring_tasks, (void *const *) task, len, nullptr);
-		whine(Severity::INFO,
-		      fmt::format("Thread {} submitted {} packets for processing", thread_id, len),
-		      GAPPP_LOG_GPU_HELM);
+		if (ret < len) {
+			whine(Severity::WARN,
+			      fmt::format("GPU task buffer: {} enqueue requested by thread {} > {} enqueued", len, thread_id, ret),
+			      GAPPP_LOG_GPU_HELM);
+		} else {
+			whine(Severity::INFO,
+			      fmt::format("Thread {} submitted {} packets for processing", thread_id, len),
+			      GAPPP_LOG_GPU_HELM);
+		}
 		return (len - ret);
 	}
 

@@ -10,19 +10,19 @@
 
 namespace GAPPP {
 	static struct rte_eth_conf port_conf = {
-			.rxmode = {
-					.mq_mode = ETH_MQ_RX_NONE,
-					.split_hdr_size = 0,
+		.rxmode = {
+			.mq_mode = ETH_MQ_RX_NONE,
+			.split_hdr_size = 0,
+		},
+		.txmode = {
+			.mq_mode = ETH_MQ_TX_NONE,
+		},
+		.rx_adv_conf = {
+			.rss_conf = {
+				.rss_key = nullptr,
+				.rss_hf = 0,
 			},
-			.txmode = {
-					.mq_mode = ETH_MQ_TX_NONE,
-			},
-			.rx_adv_conf = {
-					.rss_conf = {
-							.rss_key = nullptr,
-							.rss_hf = 0,
-					},
-			},
+		},
 	};
 
 	bool Router::dev_probe(uint16_t port_id) noexcept {
@@ -121,7 +121,8 @@ namespace GAPPP {
 		if (unlikely(ret < buf->len)) {
 			do {
 				rte_pktmbuf_free(buf->m_table[ret]);
-			} while (++ret < buf->len);
+			}
+			while (++ret < buf->len);
 		}
 
 		return 0;
@@ -130,13 +131,17 @@ namespace GAPPP {
 	void Router::port_queue_event_loop(struct router_thread_ident ident,
 	                                   struct router_thread_local_mbuf *buf,
 	                                   volatile bool *stop) {
-		struct rte_mbuf *pkts_burst[GAPPP_BURST_MAX_PACKET];
+		std::array<struct rte_mbuf *, GAPPP_BURST_MAX_PACKET> tx_burst{};
+		std::array<struct rte_mbuf *, GAPPP_BURST_MAX_PACKET> rx_burst{};
+
 		unsigned int lcore_id;
 		uint64_t prev_tsc, diff_tsc, cur_tsc;
-		int i, nb_rx;
+		int i, nb_rx
+		unsigned int nb_tx;
+		unsigned int ret;
 		uint8_t portid, queueid;
 		const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) /
-		                           US_PER_S * GAPPP_BURST_TX_DRAIN_US;
+			US_PER_S * GAPPP_BURST_TX_DRAIN_US;
 
 		prev_tsc = 0;
 		lcore_id = rte_lcore_id();
@@ -160,16 +165,21 @@ namespace GAPPP {
 			/*
 			 * Read packet from RX queues
 			 */
-			nb_rx = rte_eth_rx_burst(portid, queueid, pkts_burst,
+			nb_rx = rte_eth_rx_burst(portid, queueid, rx_burst.data(),
 			                         GAPPP_BURST_MAX_PACKET);
-			if (nb_rx == 0)
-				continue;
+			if (nb_rx != 0) {
+				this->g->submit_rx(ident, rx_burst.data(), nb_rx);
+				// CPU only implementation at https://github.com/ceph/dpdk/blob/master/examples/l3fwd/l3fwd_lpm_sse.h
+			}
 
-			// FIXME:
-
-			// FIXME: this doesn't exist yet
-			// FIXME: tell GPU we have something to do
-			// CPU only implementation at https://github.com/ceph/dpdk/blob/master/examples/l3fwd/l3fwd_lpm_sse.h
+			// Handle TX
+			nb_tx = rte_ring_dequeue_burst(this->ring_tx.at(ident),
+			                               reinterpret_cast<void **>(tx_burst.data()),
+			                               GAPPP_BURST_MAX_PACKET,
+			                               nullptr);
+			if (nb_tx > 0) {
+				ret = rte_eth_tx_burst(portid, queueid, tx_burst.data(), nb_tx);
+			}
 		}
 	}
 
@@ -177,12 +187,12 @@ namespace GAPPP {
 		if (this->packet_memory_pool[port] == nullptr) {
 			std::string pool_name = fmt::format("Packet memory pool/{}", port);
 			this->packet_memory_pool[port] =
-					rte_pktmbuf_pool_create(pool_name.c_str(),
-					                        n_packet,
-					                        GAPPP_MEMPOOL_CACHE_SIZE,
-					                        0,
-					                        RTE_MBUF_DEFAULT_BUF_SIZE,
-					                        0);
+				rte_pktmbuf_pool_create(pool_name.c_str(),
+				                        n_packet,
+				                        GAPPP_MEMPOOL_CACHE_SIZE,
+				                        0,
+				                        RTE_MBUF_DEFAULT_BUF_SIZE,
+				                        0);
 			if (this->packet_memory_pool[port] == nullptr) {
 				whine(Severity::CRIT, fmt::format("Allocation for {} failed", pool_name), GAPPP_LOG_ROUTER);
 			} else {
@@ -202,19 +212,22 @@ namespace GAPPP {
 		struct router_thread_ident id{port_id, queue};
 		try {
 			tx_ring = this->ring_tx.at(id);
-		} catch (std::out_of_range &e) {
+		}
+		catch (std::out_of_range &e) {
 			whine(Severity::CRIT, fmt::format("No TX buffer allocated for {}", id), GAPPP_LOG_ROUTER);
 		};
 		unsigned int ret = rte_ring_enqueue_burst(tx_ring, reinterpret_cast<void *const *>(packets), len, nullptr);
 		if (ret < len) {
-			whine(Severity::WARN, fmt::format("TX buffer {}: {} enqueue requested > {} enqueued", id, len, ret), GAPPP_LOG_ROUTER);
+			whine(Severity::WARN,
+			      fmt::format("TX buffer {}: {} enqueue requested > {} enqueued", id, len, ret),
+			      GAPPP_LOG_ROUTER);
 		}
 		return len - ret;
 	}
 
-	Router::Router(std::default_random_engine &rng_engine) noexcept :
-			rng_engine(rng_engine) {}
-
+	Router::Router(std::default_random_engine &rng_engine) noexcept
+		:
+		rng_engine(rng_engine) {}
 
 	void Router::assign_gpu_helm(GPUHelm *helm) noexcept {
 		this->g = helm;
