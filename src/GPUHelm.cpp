@@ -6,18 +6,25 @@
 #include "components.h"
 
 #include "l3fwd.h"
+#include "selftest.h"
 
 namespace GAPPP {
 	GPUHelm::GPUHelm() {
+		// Do a GPU quick self test
+		if (!GAPPP::selftest::selftest()) {
+			whine(Severity::CRIT, "GPU couldn't execute simple vector add?!", GAPPP_LOG_GPU_HELM);
+		}
+
 		ring_tasks = rte_ring_create("GPUHelmRingTask", GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT, 0, RING_F_SC_DEQ);
 		if (ring_tasks == nullptr) {
-			whine(Severity::CRIT, "Cannot allocate Task Queue ring buffer", "GPU Helm");
+			whine(Severity::CRIT, "Cannot allocate Task Queue ring buffer", GAPPP_LOG_GPU_HELM);
 		}
 		ring_completion = rte_ring_create("GPUHelmRingCompletion", GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT, 0, 0);
 		if (ring_completion == nullptr) {
-			whine(Severity::CRIT, "Cannot allocate Completion Queue ring buffer", "GPU Helm");
+			whine(Severity::CRIT, "Cannot allocate Completion Queue ring buffer", GAPPP_LOG_GPU_HELM);
 		}
 		running.reserve(GAPPP_GPU_FUTURE_PREALLOCATE);
+
 		// TODO: Transfer routing table into GPU?
 	}
 
