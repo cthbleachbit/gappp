@@ -55,3 +55,4 @@ add_subdirectory(cuda-src)
 
 add_subdirectory(src)
 set(gappp::libgappp libgappp ALIAS)
+target_link_libraries(libgappp PRIVATE l3fwd_cuda)

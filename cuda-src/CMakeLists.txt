@@ -1,1 +1,1 @@
-add_library(l3fwd_cuda l3fwd.cu l3fwd.h)
+add_library(l3fwd_cuda SHARED l3fwd.cu l3fwd.h)
