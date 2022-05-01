@@ -28,8 +28,20 @@ Inspired by [PacketShader](https://dl.acm.org/doi/10.1145/1851275.1851207), this
   - `git submodule update --init --recursive`
 * Return to root dir:
   - `mkdir build`
-  - `cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja ..`
+  - `cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja -DCUDA_TOOLKIT_ROOT_DIR=<path_to_cuda_toolkit>..`
   - `ninja`
+
+### Private Testbed Notes
+
+Use the following cmake parameters:
+
+```
+cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja \
+  -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.6 \
+  -DCMAKE_C_COMPILER=/usr/bin/gcc-11 \
+  -DCMAKE_CXX_COMPILER=/usr/bin/g++-11 \
+  ..
+```
 
 # Command line arguments
 

@@ -20,6 +20,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cuda.cmake)
 # CUDA
 set(CMAKE_CUDA_ARCHITECTURES 70 72 75 80 86 87)
 find_package(CUDA)
+set(CMAKE_CUDA_COMPILER ${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc)
 
 # DPDK
 find_package(PkgConfig REQUIRED)
