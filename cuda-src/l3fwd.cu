@@ -14,15 +14,19 @@
 #define __global__
 #endif
 
+#include <cstdio>
+
 #include "gappp_types.h"
 #include "l3fwd.h"
-
+#include "../include/gappp_types.h"
 
 
 namespace GAPPP {
 	namespace l3fwd {
-		__global__ int* numroutes = nullptr;
-		__global__ route* routes = nullptr;
+
+		__managed__ int numroutes = 0;
+		__managed__ struct route routes[4096];
+
 		__global__ void VecAdd(float *A, float *B, float *C) {
 			int i = threadIdx.x;
 			C[i] = A[i] + B[i];
@@ -37,36 +41,19 @@ namespace GAPPP {
 		}
 
 
-		__global__ void routing_table_modify(routing_table t){
-				int i = threadIdx.x;
-				t[i].network = table[i].network;
-				t[i].mask = table[i].mask;
-				t[i].gateway = table[i].gateway;
-				t[i].out_port = table[i].out_port;
+		__global__ void readTable() {
+			int i = threadIdx.x;
+			printf("%u %u %u %u\n", routes[i].network, routes[i].mask, routes[i].gateway, routes[i].out_port);
 		}
-		
-		__global__ void readTable(){
-			//	int i= threadIdx.x;
-			printf("%d\n", routes[0].out_port);	
-		
-		}
-		
 
-
-
-		int setTable(routing_table t){
+		int setTable(GAPPP::routing_table t) {
 
 			//cudaMemcpyToSymbol(routetable, &t, sizeof(t), size_t(0),cudaMemcpyHostToDevice);
 
-			
-			cudaMalloc((void **)&numroutes, sizeof(int));//for gpu struct
-			
-			cudaMalloc((void **)&routes, sizeof(route)*t.size());//for gpu struct
-			
-			cudaMemcpy(routes, t.data(), sizeof(route)*t.size(), cudaMemcpyHostToDevice);
-			
-			
-			readTable<<<1, 1>>>();
+			numroutes = t.size();
+			cudaMemcpy(routes, t.data(), sizeof(route) * t.size(), cudaMemcpyHostToDevice);
+
+			readTable<<<1, numroutes>>>();
 
 			//cudaMemcpy(&ret, gpu, sizeof(t), cudaMemcpyDeviceToHost);
 

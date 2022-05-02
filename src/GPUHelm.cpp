@@ -40,7 +40,7 @@ namespace GAPPP {
 		running.reserve(GAPPP_GPU_FUTURE_PREALLOCATE);
 
 		// Transfer routing table into GPU?
-		string filename("/home/kruse/gappp/test-inputs/simple-routes");
+		string filename("/home/tianhao/gappp/test-inputs/simple-routes");
 
 		ifstream input_file(filename);
 		if (!input_file.is_open()) {
@@ -49,17 +49,9 @@ namespace GAPPP {
 
 		routing_table table;
 		table = GAPPP::parse_table(input_file);
-
-		cudaMalloc(&this->rtable, sizeof(decltype(*rtable)));
-		if (this->rtable == nullptr) {
-			whine(Severity::CRIT, "Failed to allocate GPU memory for routing table", GAPPP_LOG_GPU_HELM);
-		}
-		GAPPP::printTablePrinter(table, cout);
-
-		//cudaMalloc((void**)&gpuTable, sizeof(table));
-		//cudaMemcpy(cpuPointArray, gpuPointArray, sizeof(table), cudaMemcpyDeviceToHost);
-
 		int x = GAPPP::l3fwd::setTable(table);
+		whine(Severity::INFO, "Routing table loaded", GAPPP_LOG_GPU_HELM);
+		GAPPP::printTablePrinter(table, cout);
 	}
 
 	GPUHelm::~GPUHelm() {
