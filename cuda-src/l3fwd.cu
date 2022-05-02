@@ -21,6 +21,8 @@
 
 namespace GAPPP {
 	namespace l3fwd {
+		__global__ int* numroutes = nullptr;
+		__global__ route* routes = nullptr;
 		__global__ void VecAdd(float *A, float *B, float *C) {
 			int i = threadIdx.x;
 			C[i] = A[i] + B[i];
@@ -42,15 +44,29 @@ namespace GAPPP {
 				t[i].gateway = table[i].gateway;
 				t[i].out_port = table[i].out_port;
 		}
+		
+		__global__ void readTable(){
+			//	int i= threadIdx.x;
+			printf("%d\n", routes[0].out_port);	
+		
+		}
+		
+
+
 
 		int setTable(routing_table t){
 
-			cudaMemcpyToSymbol(routetable, &t, sizeof(t), size_t(0),cudaMemcpyHostToDevice);
+			//cudaMemcpyToSymbol(routetable, &t, sizeof(t), size_t(0),cudaMemcpyHostToDevice);
 
 			
-			//cudaMalloc((void **)&gpu, sizeof(t));//for gpu struct
+			cudaMalloc((void **)&numroutes, sizeof(int));//for gpu struct
 			
-			//routing_table_modify<<<1, t.size()>>>(*gpu);
+			cudaMalloc((void **)&routes, sizeof(route)*t.size());//for gpu struct
+			
+			cudaMemcpy(routes, t.data(), sizeof(route)*t.size(), cudaMemcpyHostToDevice);
+			
+			
+			readTable<<<1, 1>>>();
 
 			//cudaMemcpy(&ret, gpu, sizeof(t), cudaMemcpyDeviceToHost);
 
