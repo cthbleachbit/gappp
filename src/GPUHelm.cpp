@@ -12,6 +12,7 @@
 #include <vector>
 #include <cuda_runtime.h>
 #include "RouteTable.h"
+
 using std::cout;
 using std::cerr;
 using std::endl;
@@ -21,7 +22,7 @@ using std::vector;
 
 
 namespace GAPPP {
-	GPUHelm::GPUHelm() {
+	GPUHelm::GPUHelm(GAPPP::cuda_module_t &module_invoke) : module_invoke(module_invoke) {
 		// Do a GPU quick self test
 		if (GAPPP::selftest::invoke(0, nullptr) != 0) {
 			whine(Severity::CRIT, "GPU Self test failed", GAPPP_LOG_GPU_HELM);
@@ -106,7 +107,7 @@ namespace GAPPP {
 				}));
 			}
 
-			for (auto future = this->running.begin(); future != this->running.end(); future++) {
+			for (auto future = this->running.begin(); future < this->running.end(); future++) {
 				auto status = future->wait_for(0ms);
 
 				if (status == std::future_status::ready) {
@@ -124,8 +125,12 @@ namespace GAPPP {
 
 	int GPUHelm::gpu_minion_thread(unsigned int nbr_tasks,
 	                               std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST> &packets) {
-		int ret = GAPPP::l3fwd::invoke(nbr_tasks, packets.data());
-		// FIXME: submit tx to workers
+		int ret = this->module_invoke(nbr_tasks, packets.data());
+		// FIXME: extremely slow - submit tx to workers
+		for (int idx = 0; idx < nbr_tasks; idx++) {
+			struct rte_mbuf *pkt = packets[idx];
+			r->submit_tx(pkt->port, 1, &pkt);
+		}
 		return ret;
 	}
 

@@ -10,6 +10,8 @@
 
 #include "Logging.h"
 #include "components.h"
+#include "dummy.h"
+#include "l3fwd.h"
 
 /*
  * Notes: DPDK parameters must be placed before program parameters
@@ -68,7 +70,8 @@ int main(int argc, char **argv) {
 	// TODO: Handle program options
 
 	// TODO: Create GPU Helm
-	helm = new GAPPP::GPUHelm();
+	GAPPP::cuda_module_t module = GAPPP::dummy::invoke;
+	helm = new GAPPP::GPUHelm(module);
 
 	// TODO: Create router instance
 	router = new GAPPP::Router(rng_engine);

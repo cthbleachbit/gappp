@@ -213,11 +213,14 @@ namespace GAPPP {
 		// Pointer to gpu routing table
 		gpu_routing_table *rtable = nullptr;
 
+		// Entry point to module invocation
+		GAPPP::cuda_module_t &module_invoke;
+
 	public:
 		/**
 		 * Construct a GPU helm and allocate associated message ring buffers
 		 */
-		GPUHelm();
+		GPUHelm(GAPPP::cuda_module_t &module_invoke);
 
 		/**
 		 * Free the associated data structures

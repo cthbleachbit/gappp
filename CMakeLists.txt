@@ -56,5 +56,7 @@ endif ()
 add_subdirectory(cuda-src)
 
 add_subdirectory(src)
+target_link_libraries(libgappp PUBLIC gappp-cuda)
+target_link_libraries(gappp-main PUBLIC gappp-cuda)
+
 set(gappp::libgappp libgappp ALIAS)
-target_link_libraries(libgappp PRIVATE gappp-cuda)

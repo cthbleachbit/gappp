@@ -5,6 +5,8 @@
 #ifndef GAPPP_CUDA_DUMMY_H
 #define GAPPP_CUDA_DUMMY_H
 
+#include <rte_mbuf.h>
+
 namespace GAPPP::dummy {
 	/**
 	 * Dummy processing module - map things into GPU memory and do nothing
