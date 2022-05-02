@@ -21,7 +21,7 @@
 
 #include "gappp_types.h"
 #include "l3fwd.h"
-#include "../include/gappp_types.h"
+#include "Logging.h"
 
 #define GAPPP_L3FWD_MAX_ROUTES 4096
 
@@ -87,6 +87,7 @@ namespace GAPPP {
 
 
 		int invoke(unsigned int nbr_tasks, struct rte_mbuf **packets) {
+			whine(Severity::INFO, fmt::format("L3FWD kernel invocation with {}", nbr_tasks), "L3FWD");
 			prefixMatch<<<1, nbr_tasks >>>(packets);
 			return 0;
 		}
