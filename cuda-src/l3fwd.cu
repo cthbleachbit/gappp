@@ -34,7 +34,7 @@ namespace GAPPP {
 			packets[i]->port = out_port;
 		}
 		int invoke(unsigned int nbr_tasks, struct rte_mbuf **packets) {
-			prefixMatch<<1,nbr_tasks>>(packets);
+			prefixMatch<<<1, nbr_tasks>>>(packets);
 			return 0;
 		}
 
