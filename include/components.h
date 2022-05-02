@@ -263,11 +263,11 @@ namespace GAPPP {
 		/**
 		 * Launch a GPU asynchronous task to process nbr_tasks packets, referred as pointers in packets.
 		 * @param nbr_tasks
-		 * @param packets
+		 * @param packets     Note: needs to be freed after use [transfer full]
 		 * @return
 		 */
 		int
-		gpu_minion_thread(unsigned int nbr_tasks, std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST> &packets);
+		gpu_minion_thread(unsigned int nbr_tasks, std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST> *packets);
 	};
 
 }

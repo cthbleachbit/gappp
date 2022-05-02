@@ -96,13 +96,15 @@ namespace GAPPP {
 		whine(Severity::INFO, "Entering event loop", GAPPP_LOG_GPU_HELM);
 
 		while (!*stop) {
+			// Note: ownership is transferred into minion - free after use
+			auto local_tasks = new std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST>();
 			nbr_local_tasks = rte_ring_dequeue_bulk(this->ring_tasks,
-			                                        (void **) local_tasks.data(),
+			                                        (void **) local_tasks->data(),
 			                                        GAPPP_GPU_HELM_TASK_BURST,
 			                                        nullptr);
 			if (nbr_local_tasks > 0) {
 				// TODO: spawn GPU minions that launches CUDA contexts
-				this->running.emplace_back(std::async(std::launch::async, [nbr_local_tasks, &local_tasks, this] {
+				this->running.emplace_back(std::async(std::launch::async, [nbr_local_tasks, local_tasks, this] {
 					return this->gpu_minion_thread(nbr_local_tasks, local_tasks);
 				}));
 			}
@@ -124,13 +126,14 @@ namespace GAPPP {
 	}
 
 	int GPUHelm::gpu_minion_thread(unsigned int nbr_tasks,
-	                               std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST> &packets) {
-		int ret = this->module_invoke(nbr_tasks, packets.data());
+	                               std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST> *packets) {
+		int ret = this->module_invoke(nbr_tasks, packets->data());
 		// FIXME: extremely slow - submit tx to workers
 		for (int idx = 0; idx < nbr_tasks; idx++) {
-			struct rte_mbuf *pkt = packets[idx];
+			struct rte_mbuf *pkt = (*packets)[idx];
 			r->submit_tx(pkt->port, 1, &pkt);
 		}
+		delete packets;
 		return ret;
 	}
 
