@@ -7,6 +7,7 @@
 #include <csignal>
 #include <random>
 #include <future>
+#include <sys/prctl.h>
 #include <getopt.h>
 
 #include "Logging.h"
@@ -121,6 +122,7 @@ int main(int argc, char **argv) {
 	router->dev_probe(0);
 
 	// TODO: Start event loop
+	prctl(PR_SET_NAME, "Main");
 	r_thread = std::async(std::launch::async, [&stop, router] { router->launch_threads(&stop); });
 	g_thread = std::async(std::launch::async, [&stop, helm] { helm->gpu_helm_event_loop(&stop); });
 

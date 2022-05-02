@@ -11,6 +11,7 @@
 #include <fstream>
 #include <vector>
 #include <cuda_runtime.h>
+#include <sys/prctl.h>
 #include "RouteTable.h"
 
 using std::cout;
@@ -85,6 +86,7 @@ namespace GAPPP {
 		using namespace std::chrono_literals;
 		auto ring_completion = this->ring_completion;
 
+		prctl(PR_SET_NAME, "GPU Helm");
 		if (!this->ring_tasks || !this->ring_completion) {
 			whine(Severity::CRIT, "GPU Helm ring buffers are not initialized", GAPPP_LOG_GPU_HELM);
 		}

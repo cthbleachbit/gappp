@@ -6,6 +6,7 @@
 #include "components.h"
 
 #include <fmt/format.h>
+#include <sys/prctl.h>
 #include <random>
 
 namespace GAPPP {
@@ -141,6 +142,7 @@ namespace GAPPP {
 	void Router::launch_threads(volatile bool *stop) {
 		const int worker_id_offset = 6;
 		// Spawn workers
+		prctl(PR_SET_NAME, "Router Master");
 		for (auto port : this->ports) {
 			for (uint16_t i = 0; i < GAPPP_ROUTER_THREADS_PER_PORT; i++) {
 				struct router_worker_launch_parameter param{.r = this, .stop = stop, .id = {port, i}};
@@ -198,6 +200,7 @@ namespace GAPPP {
 		whine(Severity::INFO,
 		      fmt::format("Worker {} - Entering main loop @ lcore={}", ident, lcore_id), GAPPP_LOG_ROUTER);
 
+		prctl(PR_SET_NAME, fmt::format("Router Worker {}", ident).c_str());
 
 		while (!*stop) {
 			/*
