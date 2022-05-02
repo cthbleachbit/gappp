@@ -220,7 +220,7 @@ namespace GAPPP {
 		/**
 		 * Construct a GPU helm and allocate associated message ring buffers
 		 */
-		GPUHelm(GAPPP::cuda_module_t &module_invoke);
+		GPUHelm(GAPPP::cuda_module_t &module_invoke, const std::string &path_route_table);
 
 		/**
 		 * Free the associated data structures

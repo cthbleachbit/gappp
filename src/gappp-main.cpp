@@ -7,6 +7,7 @@
 #include <csignal>
 #include <random>
 #include <future>
+#include <getopt.h>
 
 #include "Logging.h"
 #include "components.h"
@@ -69,9 +70,47 @@ int main(int argc, char **argv) {
 
 	// TODO: Handle program options
 
-	// TODO: Create GPU Helm
+	static struct option long_options[] = {
+		{"module", required_argument, nullptr, 'm'},
+		{"route", required_argument, nullptr, 'r'},
+		{nullptr, 0, nullptr, 0},
+	};
+
 	GAPPP::cuda_module_t module = GAPPP::dummy::invoke;
-	helm = new GAPPP::GPUHelm(module);
+	std::string option_route_table;
+	std::string option_module;
+	while (true) {
+		int option_index = 0;
+		int c = getopt_long(argc, argv, "m:r:", long_options, &option_index);
+		if (c == -1)
+			break;
+
+		switch (c) {
+			case 0:
+				break;
+			case 'm':
+				option_module = std::string(optarg);
+				break;
+			case 'r':
+				option_route_table = std::string(optarg);
+				break;
+			default:
+				GAPPP::whine(GAPPP::Severity::WARN, fmt::format("Unknown argument {}", optarg), "Main");
+		}
+	}
+
+	if (option_route_table.empty()) {
+		GAPPP::whine(GAPPP::Severity::CRIT, "No routing table specified! Use -r <path/to/table>.", "Main");
+	}
+	if (option_module == "dummy") {
+		module = GAPPP::dummy::invoke;
+	} else if (option_module == "l3fwd") {
+		module = GAPPP::l3fwd::invoke;
+	} else {
+		GAPPP::whine(GAPPP::Severity::CRIT, "No module specified! Use -m [l3fwd|dummy].", "Main");
+	}
+	// TODO: Create GPU Helm
+	helm = new GAPPP::GPUHelm(module, option_route_table);
 
 	// TODO: Create router instance
 	router = new GAPPP::Router(rng_engine);

@@ -22,7 +22,8 @@ using std::vector;
 
 
 namespace GAPPP {
-	GPUHelm::GPUHelm(GAPPP::cuda_module_t &module_invoke) : module_invoke(module_invoke) {
+	GPUHelm::GPUHelm(GAPPP::cuda_module_t &module_invoke, const std::string &path_route_table)
+			: module_invoke(module_invoke) {
 		// Do a GPU quick self test
 		if (GAPPP::selftest::invoke(0, nullptr) != 0) {
 			whine(Severity::CRIT, "GPU Self test failed", GAPPP_LOG_GPU_HELM);
@@ -41,11 +42,10 @@ namespace GAPPP {
 		running.reserve(GAPPP_GPU_FUTURE_PREALLOCATE);
 
 		// Transfer routing table into GPU?
-		string filename("/home/tianhao/gappp/test-inputs/simple-routes");
-
-		ifstream input_file(filename);
+		ifstream input_file(path_route_table);
 		if (!input_file.is_open()) {
-			whine(Severity::CRIT, "Failed to open routing table", GAPPP_LOG_GPU_HELM);
+			whine(Severity::CRIT, fmt::format("Failed to open routing table at {}", path_route_table),
+			      GAPPP_LOG_GPU_HELM);
 		}
 
 		routing_table table;
