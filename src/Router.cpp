@@ -11,19 +11,19 @@
 
 namespace GAPPP {
 	static struct rte_eth_conf port_conf = {
-		.rxmode = {
-			.mq_mode = ETH_MQ_RX_NONE,
-			.split_hdr_size = 0,
-		},
-		.txmode = {
-			.mq_mode = ETH_MQ_TX_NONE,
-		},
-		.rx_adv_conf = {
-			.rss_conf = {
-				.rss_key = nullptr,
-				.rss_hf = 0,
+			.rxmode = {
+					.mq_mode = ETH_MQ_RX_NONE,
+					.split_hdr_size = 0,
 			},
-		},
+			.txmode = {
+					.mq_mode = ETH_MQ_TX_NONE,
+			},
+			.rx_adv_conf = {
+					.rss_conf = {
+							.rss_key = nullptr,
+							.rss_hf = 0,
+					},
+			},
 	};
 
 	bool Router::dev_probe(uint16_t port_id) noexcept {
@@ -64,29 +64,33 @@ namespace GAPPP {
 		allocate_packet_memory_buffer(GAPPP_MEMPOOL_PACKETS, port_id);
 
 		// RX Queue setup
-		// FIXME: initialize multiple RX queue if needed
 		rxq_conf = dev_info.default_rxconf;
 		rxq_conf.offloads = local_port_conf.rxmode.offloads;
-		ret_val = rte_eth_rx_queue_setup(port_id, 0, nb_rxd,
-		                                 rte_eth_dev_socket_id(port_id),
-		                                 &rxq_conf,
-		                                 this->packet_memory_pool[port_id]);
-		if (ret_val < 0)
-			whine(Severity::CRIT,
-			      fmt::format("port {}: RX queue 0 setup failed (res={})", port_id, ret_val),
-			      GAPPP_LOG_ROUTER);
+		for (int i = 0; i < GAPPP_DEFAULT_RX_QUEUE; i++) {
+			ret_val = rte_eth_rx_queue_setup(port_id, i, nb_rxd,
+			                                 rte_eth_dev_socket_id(port_id),
+			                                 &rxq_conf,
+			                                 this->packet_memory_pool[port_id]);
+			if (ret_val < 0)
+				whine(Severity::CRIT,
+				      fmt::format("port {}: RX queue {} setup failed (res={})", port_id, i, ret_val),
+				      GAPPP_LOG_ROUTER);
+		}
+
 
 		// TX queue setup
-		// FIXME: initialize multiple TX queue if needed
 		txq_conf = dev_info.default_txconf;
 		txq_conf.offloads = local_port_conf.txmode.offloads;
-		ret_val = rte_eth_tx_queue_setup(port_id, 0, nb_txd,
-		                                 rte_eth_dev_socket_id(port_id),
-		                                 &txq_conf);
-		if (ret_val < 0)
-			whine(Severity::CRIT,
-			      fmt::format("port {}: TX queue 0 setup failed (res={})", port_id, ret_val),
-			      GAPPP_LOG_ROUTER);
+		for (int i = 0; i < GAPPP_DEFAULT_TX_QUEUE; i++) {
+			ret_val = rte_eth_tx_queue_setup(port_id, i, nb_txd,
+			                                 rte_eth_dev_socket_id(port_id),
+			                                 &txq_conf);
+			if (ret_val < 0)
+				whine(Severity::CRIT,
+				      fmt::format("port {}: TX queue {} setup failed (res={})", port_id, i, ret_val),
+				      GAPPP_LOG_ROUTER);
+		}
+
 		// Allocate TX ring buffers for workers
 		for (uint16_t i = 0; i < GAPPP_ROUTER_THREADS_PER_PORT; i++) {
 			struct router_thread_ident ident{port_id, i};
@@ -135,7 +139,7 @@ namespace GAPPP {
 
 	static int router_worker_launch(void *ptr) {
 		auto parameters = (router_worker_launch_parameter *) (ptr);
-		parameters->r->port_queue_event_loop(parameters->id, nullptr, parameters->stop);
+		parameters->r->port_queue_event_loop(parameters->id, parameters->stop);
 		return 0;
 	}
 
@@ -143,7 +147,7 @@ namespace GAPPP {
 		const int worker_id_offset = 6;
 		// Spawn workers
 		prctl(PR_SET_NAME, "Router Master");
-		for (auto port : this->ports) {
+		for (auto port: this->ports) {
 			for (uint16_t i = 0; i < GAPPP_ROUTER_THREADS_PER_PORT; i++) {
 				struct router_worker_launch_parameter param{.r = this, .stop = stop, .id = {port, i}};
 				int worker_number = worker_id_offset + port * GAPPP_ROUTER_THREADS_PER_PORT + i;
@@ -153,7 +157,7 @@ namespace GAPPP {
 		}
 
 		// Wait for workers to exit
-		for (auto worker : this->workers) {
+		for (auto worker: this->workers) {
 			rte_eal_wait_lcore(worker.second);
 			this->workers.erase(worker.first);
 		}
@@ -167,16 +171,13 @@ namespace GAPPP {
 		if (unlikely(ret < buf->len)) {
 			do {
 				rte_pktmbuf_free(buf->m_table[ret]);
-			}
-			while (++ret < buf->len);
+			} while (++ret < buf->len);
 		}
 
 		return 0;
 	}
 
-	void Router::port_queue_event_loop(struct router_thread_ident ident,
-	                                   struct router_thread_local_mbuf *buf,
-	                                   volatile bool *stop) {
+	void Router::port_queue_event_loop(struct router_thread_ident ident, volatile bool *stop) {
 		std::array<struct rte_mbuf *, GAPPP_BURST_MAX_PACKET> tx_burst{};
 		std::array<struct rte_mbuf *, GAPPP_BURST_MAX_PACKET> rx_burst{};
 
@@ -185,9 +186,10 @@ namespace GAPPP {
 		int i, nb_rx;
 		unsigned int nb_tx;
 		unsigned int ret;
-		uint8_t portid, queueid;
+		uint8_t portid = ident.port;
+		uint8_t queueid = ident.queue;
 		const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) /
-			US_PER_S * GAPPP_BURST_TX_DRAIN_US;
+		                           US_PER_S * GAPPP_BURST_TX_DRAIN_US;
 
 		prev_tsc = 0;
 		lcore_id = rte_lcore_id();
@@ -234,8 +236,7 @@ namespace GAPPP {
 						      GAPPP_LOG_ROUTER);
 						do {
 							rte_pktmbuf_free(tx_burst[ret]);
-						}
-						while (++ret < nb_tx);
+						} while (++ret < nb_tx);
 					}
 				}
 				prev_tsc = cur_tsc;
@@ -249,12 +250,12 @@ namespace GAPPP {
 		if (this->packet_memory_pool[port] == nullptr) {
 			std::string pool_name = fmt::format("Packet memory pool/{}", port);
 			this->packet_memory_pool[port] =
-				rte_pktmbuf_pool_create(pool_name.c_str(),
-				                        n_packet,
-				                        GAPPP_MEMPOOL_CACHE_SIZE,
-				                        0,
-				                        RTE_MBUF_DEFAULT_BUF_SIZE,
-				                        0);
+					rte_pktmbuf_pool_create(pool_name.c_str(),
+					                        n_packet,
+					                        GAPPP_MEMPOOL_CACHE_SIZE,
+					                        0,
+					                        RTE_MBUF_DEFAULT_BUF_SIZE,
+					                        0);
 			if (this->packet_memory_pool[port] == nullptr) {
 				whine(Severity::CRIT, fmt::format("Allocation for {} failed", pool_name), GAPPP_LOG_ROUTER);
 			} else {
@@ -288,13 +289,13 @@ namespace GAPPP {
 	}
 
 	Router::Router(std::default_random_engine &rng_engine) noexcept
-		:
-		rng_engine(rng_engine) {}
+			:
+			rng_engine(rng_engine) {}
 
 	Router::~Router() noexcept {
 		int ret;
 		// Deallocate ring buffers
-		for (auto port : this->ports) {
+		for (auto port: this->ports) {
 			whine(Severity::INFO, fmt::format("Stopping port {}", port), GAPPP_LOG_ROUTER);
 			rte_eth_dev_stop(port);
 			for (uint16_t i = 0; i < GAPPP_ROUTER_THREADS_PER_PORT; i++) {
@@ -303,7 +304,7 @@ namespace GAPPP {
 		}
 
 		// Clean up all devices and memory pools
-		for (auto port : this->ports) {
+		for (auto port: this->ports) {
 			whine(Severity::INFO, fmt::format("Releasing memory pool for {}", port), GAPPP_LOG_ROUTER);
 			rte_mempool_free(packet_memory_pool[port]);
 		}

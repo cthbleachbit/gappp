@@ -20,10 +20,12 @@
 #define GAPPP_DEFAULT_TX_DESC (1 << 7)
 // Number of receive descriptors
 #define GAPPP_DEFAULT_RX_DESC (1 << 4)
+// Router worker threads count
+#define GAPPP_ROUTER_THREADS_PER_PORT  4
 // Number of transmit queue
-#define GAPPP_DEFAULT_TX_QUEUE 1
+#define GAPPP_DEFAULT_TX_QUEUE GAPPP_ROUTER_THREADS_PER_PORT
 // Number of receive queue
-#define GAPPP_DEFAULT_RX_QUEUE 1
+#define GAPPP_DEFAULT_RX_QUEUE GAPPP_ROUTER_THREADS_PER_PORT
 // Socket ID
 #define GAPPP_DEFAULT_SOCKET_ID 0
 // Maximum number of cores i.e. threads
@@ -38,8 +40,6 @@
 #define GAPPP_MEMPOOL_CACHE_SIZE 256
 // Memory pool size
 #define GAPPP_MEMPOOL_PACKETS ((1 << 16) - 1)
-// Router worker threads count
-#define GAPPP_ROUTER_THREADS_PER_PORT 4
 // Router Logging identifier
 #define GAPPP_LOG_ROUTER "Router"
 
@@ -133,12 +133,9 @@ namespace GAPPP {
 		/**
 		 * Main thread event loop
 		 * @param ident  thread identification
-		 * @param buf    a pointer array to track pending TX
 		 * @param stop   set to false to jump out of the loop
 		 */
-		void port_queue_event_loop(struct router_thread_ident ident,
-		                           struct router_thread_local_mbuf *buf,
-		                           volatile bool *stop);
+		void port_queue_event_loop(struct router_thread_ident ident, volatile bool *stop);
 
 		/**
 		 * Launch main event loop. This function will keep until "stop" is set to true
