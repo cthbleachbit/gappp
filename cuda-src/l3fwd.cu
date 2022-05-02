@@ -26,17 +26,15 @@ namespace GAPPP {
 
 		__managed__ int numroutes = 0;
 		__managed__ struct route routes[4096];
-
-		__global__ void VecAdd(float *A, float *B, float *C) {
+		__global__ void prefixMatch(struct rte_mbuf **packets){
 			int i = threadIdx.x;
-			C[i] = A[i] + B[i];
+			int out_port = -1;
+			// TODO: processing here
+			// TODO: lookup the table, find longest match
+			packets[i]->port = out_port;
 		}
-
 		int invoke(unsigned int nbr_tasks, struct rte_mbuf **packets) {
-			float a[4] = {1.0f, 3.0f, 5.0f, 7.0f};
-			float b[4] = {1.0f, 3.0f, 5.0f, 7.0f};
-			float c[4];
-			VecAdd<<<1, 4>>>(a, b, c);
+			prefixMatch<<1,nbr_tasks>>(packets);
 			return 0;
 		}
 
