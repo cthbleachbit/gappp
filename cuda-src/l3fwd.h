@@ -12,4 +12,8 @@ namespace GAPPP::l3fwd {
 	int invoke(unsigned int nbr_tasks, struct rte_mbuf **packets);
 }
 
+namespace GAPPP::l3fwd {
+	int setTable(routing_table t);
+}
+
 #endif //GAPPP_L3FWD_H
