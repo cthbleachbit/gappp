@@ -125,7 +125,7 @@ namespace GAPPP {
 	int GPUHelm::gpu_minion_thread(unsigned int nbr_tasks,
 	                               std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST> &packets) {
 		int ret = GAPPP::l3fwd::invoke(nbr_tasks, packets.data());
-
+		// FIXME: submit tx to workers
 		return ret;
 	}
 
