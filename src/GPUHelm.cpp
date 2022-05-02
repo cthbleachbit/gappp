@@ -11,9 +11,12 @@
 #include <fstream>
 #include <vector>
 #include "RouteTable.h"
-using std::cout; using std::cerr;
-using std::endl; using std::string;
-using std::ifstream; using std::vector;
+using std::cout;
+using std::cerr;
+using std::endl;
+using std::string;
+using std::ifstream;
+using std::vector;
 
 
 namespace GAPPP {
@@ -39,27 +42,25 @@ namespace GAPPP {
 		string filename("/home/kruse/gappp/test-inputs/simple-routes");
 
 		ifstream input_file(filename);
-                if (!input_file.is_open()) {
-       			 cerr << "Could not open the file - '"<< filename << "'" << endl;
-    		}
+		if (!input_file.is_open()) {
+			cerr << "Could not open the file - '" << filename << "'" << endl;
+		}
 
-	       routing_table table;
-		   routing_table* rtable;
+		routing_table table;
+		routing_table *rtable;
 
-	       table  = GAPPP::parse_table(input_file);
+		table = GAPPP::parse_table(input_file);
 
-		   cudaMalloc(&rtable, sizeof(table));
+		cudaMalloc(&rtable, sizeof(table));
 
+		GAPPP::printTablePrinter(table, cout);
 
-	       GAPPP::printTablePrinter(table,cout);
+		//cudaMalloc((void**)&gpuTable, sizeof(table));
+		//cudaMemcpy(cpuPointArray, gpuPointArray, sizeof(table), cudaMemcpyDeviceToHost);
 
-           //cudaMalloc((void**)&gpuTable, sizeof(table));
-		   //cudaMemcpy(cpuPointArray, gpuPointArray, sizeof(table), cudaMemcpyDeviceToHost);
-		   
-		   int x = GAPPP::l3fwd::setTable(table);
+		int x = GAPPP::l3fwd::setTable(table);
 
-		   GAPPP::printTablePrinter(routetable,cout); 
-
+		GAPPP::printTablePrinter(routetable, cout);
 
 	}
 
