@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <memory>
 #include <fmt/format.h>
+#include "gappp_types.h"
 
 // Number of transmit descriptors
 #define GAPPP_DEFAULT_TX_DESC (1 << 7)
@@ -208,6 +209,9 @@ namespace GAPPP {
 
 		// Pointer to initialized router instance - ownership is borrowed (i.e. not to be freed)
 		Router *r = nullptr;
+
+		// Pointer to gpu routing table
+		gpu_routing_table *rtable = nullptr;
 
 	public:
 		/**

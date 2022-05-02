@@ -10,6 +10,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <cuda_runtime.h>
 #include "RouteTable.h"
 using std::cout;
 using std::cerr;
@@ -38,30 +39,27 @@ namespace GAPPP {
 		}
 		running.reserve(GAPPP_GPU_FUTURE_PREALLOCATE);
 
-		// TODO: Transfer routing table into GPU?
+		// Transfer routing table into GPU?
 		string filename("/home/kruse/gappp/test-inputs/simple-routes");
 
 		ifstream input_file(filename);
 		if (!input_file.is_open()) {
-			cerr << "Could not open the file - '" << filename << "'" << endl;
+			whine(Severity::CRIT, "Failed to open routing table", GAPPP_LOG_GPU_HELM);
 		}
 
 		routing_table table;
-		routing_table *rtable;
-
 		table = GAPPP::parse_table(input_file);
 
-		cudaMalloc(&rtable, sizeof(table));
-
+		cudaMalloc(&this->rtable, sizeof(decltype(*rtable)));
+		if (this->rtable == nullptr) {
+			whine(Severity::CRIT, "Failed to allocate GPU memory for routing table", GAPPP_LOG_GPU_HELM);
+		}
 		GAPPP::printTablePrinter(table, cout);
 
 		//cudaMalloc((void**)&gpuTable, sizeof(table));
 		//cudaMemcpy(cpuPointArray, gpuPointArray, sizeof(table), cudaMemcpyDeviceToHost);
 
 		int x = GAPPP::l3fwd::setTable(table);
-
-		GAPPP::printTablePrinter(routetable, cout);
-
 	}
 
 	GPUHelm::~GPUHelm() {
