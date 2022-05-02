@@ -100,7 +100,7 @@ namespace GAPPP {
 		while (!*stop) {
 			// Note: ownership is transferred into minion - free after use
 			auto local_tasks = new std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST>();
-			nbr_local_tasks = rte_ring_dequeue_bulk(this->ring_tasks,
+			nbr_local_tasks = rte_ring_dequeue_burst(this->ring_tasks,
 			                                        (void **) local_tasks->data(),
 			                                        GAPPP_GPU_HELM_TASK_BURST,
 			                                        nullptr);
