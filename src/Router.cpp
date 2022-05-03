@@ -270,7 +270,7 @@ namespace GAPPP {
 	}
 
 	unsigned int Router::submit_tx(uint16_t port_id, size_t len, struct rte_mbuf *const *packets) {
-		std::uniform_int_distribution<uint16_t> dist(0, GAPPP_DEFAULT_TX_QUEUE - 1);
+		std::uniform_int_distribution<uint16_t> dist(0, this->ports[port_id] - 1);
 		uint16_t queue = dist(this->rng_engine);
 		struct rte_ring *tx_ring = nullptr;
 		struct router_thread_ident id{port_id, queue};
