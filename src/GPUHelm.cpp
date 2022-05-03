@@ -10,7 +10,6 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <cuda_runtime.h>
 #include <sys/prctl.h>
 #include "RouteTable.h"
 

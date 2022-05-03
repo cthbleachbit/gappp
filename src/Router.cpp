@@ -8,15 +8,33 @@
 #include <fmt/format.h>
 #include <sys/prctl.h>
 #include <random>
+#include <rte_ethdev.h>
+
+#ifndef ETH_MQ_RX_NONE
+#define RTE_ETH_MQ_RX_NONE ETH_MQ_RX_NONE
+#endif
+#ifndef ETH_MQ_TX_NONE
+#define RTE_ETH_MQ_TX_NONE ETH_MQ_TX_NONE
+#endif
+#ifndef ETH_MQ_RX_DCB_RSS
+#define RTE_ETH_MQ_RX_DCB_RSS ETH_MQ_RX_DCB_RSS
+#endif
+#ifndef ETH_MQ_TX_DCB
+#define RTE_ETH_MQ_TX_DCB ETH_MQ_TX_DCB
+#endif
+
+#ifndef RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE
+#define RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE DEV_TX_OFFLOAD_MBUF_FAST_FREE
+#endif
 
 namespace GAPPP {
 	static struct rte_eth_conf port_conf = {
 			.rxmode = {
-					.mq_mode = ETH_MQ_RX_NONE,
+					.mq_mode = RTE_ETH_MQ_RX_NONE,
 					.split_hdr_size = 0,
 			},
 			.txmode = {
-					.mq_mode = ETH_MQ_TX_NONE,
+					.mq_mode = RTE_ETH_MQ_TX_NONE,
 			},
 			.rx_adv_conf = {
 					.rss_conf = {
@@ -34,6 +52,10 @@ namespace GAPPP {
 		struct rte_eth_rxconf rxq_conf{};
 		struct rte_eth_txconf txq_conf{};
 		auto local_port_conf = port_conf;
+		if (n_queue > 1) {
+			local_port_conf.rxmode.mq_mode = RTE_ETH_MQ_RX_DCB_RSS;
+			local_port_conf.txmode.mq_mode = RTE_ETH_MQ_TX_DCB;
+		}
 
 		if (!rte_eth_dev_is_valid_port(port_id))
 			whine(Severity::CRIT, fmt::format("Invalid port ID {}", port_id), GAPPP_LOG_ROUTER);
@@ -44,8 +66,8 @@ namespace GAPPP {
 			                                  port_id, strerror(-ret_val)), GAPPP_LOG_ROUTER);
 
 		// Turn on fast free if supported
-		if (dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MBUF_FAST_FREE)
-			local_port_conf.txmode.offloads |= DEV_TX_OFFLOAD_MBUF_FAST_FREE;
+		if (dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE)
+			local_port_conf.txmode.offloads |= RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE;
 
 		local_port_conf.rx_adv_conf.rss_conf.rss_hf &= dev_info.flow_type_rss_offloads;
 

@@ -193,6 +193,9 @@ struct fmt::formatter<GAPPP::router_thread_ident> {
 };
 
 namespace GAPPP {
+	/**
+	 * GPU Helm base class for all the API GPU helm implementations should provide
+	 */
 	class GPUHelmBase {
 	public:
 		/**
@@ -236,6 +239,9 @@ namespace GAPPP {
 		virtual void assign_router(Router *router) {};
 	};
 
+	/**
+	 * Original GPU Helm - very inefficient
+	 */
 	class GPUHelm : public GPUHelmBase {
 		// Incoming buffers - CPU workers will submit_rx tasks to this ring buffer
 		// Note that this buffer is multi-producer/single-consumer.
@@ -308,6 +314,69 @@ namespace GAPPP {
 		int
 		gpu_minion_thread(unsigned int nbr_tasks, std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST> *packets);
 	};
+
+
+#ifdef GAPPP_GPU_DIRECT
+	/**
+	 * A GPU helm using GPU direct
+	 */
+	class GPUDirectHelm : public GPUHelmBase {
+		// Outstanding GPU threads
+		std::vector<std::shared_future<int>> running;
+
+		// Pointer to initialized router instance - ownership is borrowed (i.e. not to be freed)
+		Router *r = nullptr;
+
+		// Routing table for sanity check
+		routing_table routes{};
+
+		// Entry point to module invocation
+		GAPPP::cuda_module_t &module_invoke;
+
+	public:
+		/**
+		 * Construct a GPU helm and allocate associated message ring buffers
+		 */
+		GPUDirectHelm(GAPPP::cuda_module_t &module_invoke, const std::string &path_route_table);
+
+		/**
+		 * Free the associated data structures
+		 */
+		~GPUDirectHelm() override;
+
+		/**
+		 * Submit tasks to the GPU Helm
+		 * @param thread_id identity of running thread
+		 * @param len       number of packets to enqueue
+		 * @param task      incoming packet to process
+		 *                  the packet buffer are allocated from within CPU worker from the memory pool
+		 *                  ownership is transferred to GPU-helm - will be freed after DMA to GPU.
+		 * @return    0   if submission was successful
+		 *            NUM if NUM packets were left out due to space issues
+		 */
+		unsigned int submit_rx(router_thread_ident thread_id, size_t len, struct rte_mbuf *const *task) override;
+
+		/**
+		 * GPU main event loop
+		 * @param stop     terminate when stop is true
+		 */
+		void gpu_helm_event_loop(const volatile bool *stop) override;
+
+		void inline assign_router(Router *router) override {
+			this->r = router;
+		}
+
+	private:
+		/**
+		 * Launch a GPU asynchronous task to process nbr_tasks packets, referred as pointers in packets.
+		 * @param nbr_tasks
+		 * @param packets     Note: needs to be freed after use [transfer full]
+		 * @return
+		 */
+		int
+		gpu_minion_thread(unsigned int nbr_tasks, std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST> *packets);
+	};
+#endif
 }
 
 #endif //COMPONENTS_H

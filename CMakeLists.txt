@@ -54,6 +54,17 @@ else()
 	set_property(GLOBAL PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
 endif ()
 
+# GPU direct
+option(GAPPP_GPU_DIRECT "Build with GPU direct support" ON)
+if (GAPPP_GPU_DIRECT)
+	if(NOT DEFINED pkgcfg_lib_DPDK_rte_gpudev)
+		message(WARNING "DPDK gpudev is not supported - GPU direct turned off!")
+		set(GAPPP_GPU_DIRECT OFF)
+	else()
+		add_compile_definitions(GAPPP_GPU_DIRECT)
+	endif()
+endif()
+
 add_subdirectory(cuda-src)
 
 add_subdirectory(src)
