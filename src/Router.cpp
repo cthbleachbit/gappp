@@ -26,7 +26,7 @@ namespace GAPPP {
 			},
 	};
 
-	bool Router::dev_probe(uint16_t port_id) noexcept {
+	bool Router::dev_probe(uint16_t port_id, uint16_t n_queue) noexcept {
 		int ret_val;
 		uint16_t nb_rxd = GAPPP_DEFAULT_RX_DESC;
 		uint16_t nb_txd = GAPPP_DEFAULT_TX_DESC;
@@ -49,7 +49,7 @@ namespace GAPPP {
 
 		local_port_conf.rx_adv_conf.rss_conf.rss_hf &= dev_info.flow_type_rss_offloads;
 
-		ret_val = rte_eth_dev_configure(port_id, GAPPP_DEFAULT_RX_QUEUE, GAPPP_DEFAULT_TX_QUEUE, &local_port_conf);
+		ret_val = rte_eth_dev_configure(port_id, n_queue, n_queue, &local_port_conf);
 		if (ret_val != 0)
 			whine(Severity::CRIT, fmt::format("port {}: configuration failed (res={})\n",
 			                                  port_id, ret_val), GAPPP_LOG_ROUTER);
@@ -66,7 +66,7 @@ namespace GAPPP {
 		// RX Queue setup
 		rxq_conf = dev_info.default_rxconf;
 		rxq_conf.offloads = local_port_conf.rxmode.offloads;
-		for (int i = 0; i < GAPPP_DEFAULT_RX_QUEUE; i++) {
+		for (int i = 0; i < n_queue; i++) {
 			ret_val = rte_eth_rx_queue_setup(port_id, i, nb_rxd,
 			                                 rte_eth_dev_socket_id(port_id),
 			                                 &rxq_conf,
@@ -81,7 +81,7 @@ namespace GAPPP {
 		// TX queue setup
 		txq_conf = dev_info.default_txconf;
 		txq_conf.offloads = local_port_conf.txmode.offloads;
-		for (int i = 0; i < GAPPP_DEFAULT_TX_QUEUE; i++) {
+		for (int i = 0; i < n_queue; i++) {
 			ret_val = rte_eth_tx_queue_setup(port_id, i, nb_txd,
 			                                 rte_eth_dev_socket_id(port_id),
 			                                 &txq_conf);
@@ -127,7 +127,7 @@ namespace GAPPP {
 		whine(Severity::INFO,
 		      fmt::format("Port {} MAC: {}", port_id, mac_addr_to_string(addr.addr_bytes)),
 		      GAPPP_LOG_ROUTER);
-		this->ports.emplace(port_id);
+		this->ports[port_id] = n_queue;
 		return true;
 	}
 
@@ -144,13 +144,14 @@ namespace GAPPP {
 	}
 
 	void Router::launch_threads(volatile bool *stop) {
-		const int worker_id_offset = 6;
+		static int worker_id_offset = 6;
 		// Spawn workers
 		prctl(PR_SET_NAME, "Router Master");
 		for (auto port: this->ports) {
-			for (uint16_t i = 0; i < GAPPP_ROUTER_THREADS_PER_PORT; i++) {
-				struct router_worker_launch_parameter param{.r = this, .stop = stop, .id = {port, i}};
-				int worker_number = worker_id_offset + port * GAPPP_ROUTER_THREADS_PER_PORT + i;
+			for (uint16_t i = 0; i < port.second; i++) {
+				struct router_worker_launch_parameter param{.r = this, .stop = stop, .id = {port.first, i}};
+				int worker_number = worker_id_offset;
+				worker_id_offset++;
 				rte_eal_remote_launch(router_worker_launch, &param, worker_number);
 				this->workers[param.id] = worker_number;
 			}
@@ -296,17 +297,17 @@ namespace GAPPP {
 		int ret;
 		// Deallocate ring buffers
 		for (auto port: this->ports) {
-			whine(Severity::INFO, fmt::format("Stopping port {}", port), GAPPP_LOG_ROUTER);
-			rte_eth_dev_stop(port);
-			for (uint16_t i = 0; i < GAPPP_ROUTER_THREADS_PER_PORT; i++) {
-				rte_ring_free(this->ring_tx[{port, i}]);
+			whine(Severity::INFO, fmt::format("Stopping port {}", port.first), GAPPP_LOG_ROUTER);
+			rte_eth_dev_stop(port.first);
+			for (uint16_t i = 0; i < port.second; i++) {
+				rte_ring_free(this->ring_tx[{port.first, i}]);
 			}
 		}
 
 		// Clean up all devices and memory pools
 		for (auto port: this->ports) {
-			whine(Severity::INFO, fmt::format("Releasing memory pool for {}", port), GAPPP_LOG_ROUTER);
-			rte_mempool_free(packet_memory_pool[port]);
+			whine(Severity::INFO, fmt::format("Releasing memory pool for {}", port.first), GAPPP_LOG_ROUTER);
+			rte_mempool_free(packet_memory_pool[port.first]);
 		}
 	}
 } // GAPPP

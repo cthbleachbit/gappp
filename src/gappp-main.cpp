@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
 	helm->assign_router(router);
 	router->assign_gpu_helm(helm);
 	for (int i = 0; i < num_ports; i++) {
-		router->dev_probe(i);
+		router->dev_probe(i, 1);
 	}
 
 	// TODO: Start event loop

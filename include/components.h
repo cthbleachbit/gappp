@@ -107,8 +107,8 @@ namespace GAPPP {
 		std::default_random_engine &rng_engine;
 		GPUHelm *g = nullptr;
 	public:
-		// Set of ports. Use rte_eth_dev_info_get to obtain rte_eth_dev_info
-		std::unordered_set<uint16_t> ports{};
+		// Set of ports. Use rte_eth_dev_info_get to obtain rte_eth_dev_info, maps to number of queues
+		std::unordered_map<uint16_t, uint16_t> ports{};
 		// Maps <port number, queue_id> to worker watching on
 		std::unordered_map<router_thread_ident, decltype(rte_lcore_id()), router_thread_ident::hash> workers;
 		// Allocate workers to CPUs as we go
@@ -128,7 +128,7 @@ namespace GAPPP {
 		 * @param mem_buf_pool  memory buffer to setup
 		 * @return true if the device is initialized successfully and registered in the ports array
 		 */
-		bool dev_probe(uint16_t port_id) noexcept;
+		bool dev_probe(uint16_t port_id, uint16_t n_queue) noexcept;
 
 		/**
 		 * Main thread event loop
