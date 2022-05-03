@@ -12,14 +12,14 @@ Inspired by [PacketShader](https://dl.acm.org/doi/10.1145/1851275.1851207), this
 
 # Components
 
-* DPDK middleware - the portion that interfaces with the NIC
-* CUDA kernels - where the main packet processing take place on GPU
+* `src` DPDK middleware - the portion that interfaces with the NIC
+* `cuda-src` CUDA kernels - where the main packet processing take place on GPU
 
 # Goals?
 
 * A ethernet switch?
 * A IPv6 router?
-* A IPSec tunneling endpoint?
+* A in-network firewall?
 
 # Building
 
@@ -49,8 +49,10 @@ cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja \
 ### Parameters accepted
 - EAL parameter: `-w bus:dev.func` PCIe device address of the NIC to take over
 - Use `--` to separate DPDK EAL options from program specific options
-- `--ip a.b.c.d/cidr` Assign this IP address to the card
-- `--route routing_table_file` Load routing table from file
+- `-m|--module [l3fwd|dummy]` Use this CUDA module
+- `-r|--route routing_table_file` Load routing table from file
+- `-n|--num-ports X` Declare number of ports available
+- `-p|--port-queue id:nq` Allocate `nq` TX and `nq` RX queues on port `id` (optional, default to 4. Note that some port drivers don't support MQ)
 
 ### Routing table format:
 - `a.b.c.d/cidr (via <gateway>) dev <port_id>`
