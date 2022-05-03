@@ -55,6 +55,7 @@ namespace GAPPP {
 			/* if this is an IPv4 packet */
 			uint32_t ip_dst = dst_addrs[i];
 
+			/*
 			uint32_t b0, b1, b2, b3;
 
 			b0 = (ip_dst & 0x000000ff) << 24u;
@@ -63,6 +64,9 @@ namespace GAPPP {
 			b3 = (ip_dst & 0xff000000) >> 24u;
 
 			ip_dst = b0 | b1 | b2 | b3;
+			 */
+
+			// printf("Going to address %u\n", ip_dst);
 
 			for (int j = 0; j < numroutes; j++) {
 				if ((ip_dst & routes[j].mask) == routes[j].network) {
@@ -75,7 +79,7 @@ namespace GAPPP {
 
 			ports[i] = max_ind >= 0 ? routes[max_ind].out_port : UINT16_MAX;
 
-			printf("Going to port %u\n", ports[i]);
+			// printf("Going to port %u\n", ports[i]);
 		}
 
 

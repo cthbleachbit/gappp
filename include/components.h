@@ -44,7 +44,7 @@
 #define GAPPP_LOG_ROUTER "Router"
 
 // Slots to reserve in the ring_tasks buffer
-#define GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT 64
+#define GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT 4096
 // Number of tasks to dequeue in one shot
 #define GAPPP_GPU_HELM_TASK_BURST 4U
 // Preallocate minion asynchronous results
