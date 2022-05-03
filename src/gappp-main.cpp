@@ -75,16 +75,22 @@ int main(int argc, char **argv) {
 		{"module", required_argument, nullptr, 'm'},
 		{"route", required_argument, nullptr, 'r'},
 		{"num-ports", required_argument, nullptr, 'n'},
+		{"port-queue", required_argument, nullptr, 'p'},
 		{nullptr, 0, nullptr, 0},
 	};
 
 	GAPPP::cuda_module_t module = GAPPP::dummy::invoke;
 	std::string option_route_table;
 	std::string option_module;
+	std::unordered_map<uint16_t, uint16_t> port_queues{};
 	int num_ports = 1;
 	while (true) {
 		int option_index = 0;
-		int c = getopt_long(argc, argv, "m:r:n:", long_options, &option_index);
+		uint16_t p;
+		uint16_t q;
+		decltype(std::string("").begin()) off;
+		std::string arg;
+		int c = getopt_long(argc, argv, "m:r:n:p:", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -100,6 +106,12 @@ int main(int argc, char **argv) {
 			case 'n':
 				num_ports = std::atoi(optarg);
 				break;
+			case 'p':
+				arg = std::string(optarg);
+				off = std::find(arg.begin(), arg.end(), ':');
+				p = std::stoi(std::string(arg.begin(), off));
+				q = std::stoi(std::string(off + 1, arg.end()));
+				port_queues[p] = q;
 			default:
 				GAPPP::whine(GAPPP::Severity::WARN, fmt::format("Unknown argument {}", optarg), "Main");
 		}
@@ -124,7 +136,7 @@ int main(int argc, char **argv) {
 	helm->assign_router(router);
 	router->assign_gpu_helm(helm);
 	for (int i = 0; i < num_ports; i++) {
-		router->dev_probe(i, 1);
+		router->dev_probe(i, port_queues.contains(i) ? port_queues[i] : GAPPP_ROUTER_THREADS_PER_PORT);
 	}
 
 	// TODO: Start event loop
