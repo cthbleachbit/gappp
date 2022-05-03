@@ -42,6 +42,7 @@ cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja \
   -DCMAKE_C_COMPILER=/usr/bin/gcc-11 \
   -DCMAKE_CUDA_COMPILER=/usr/local/cuda-11.6/bin/nvcc \
   -DCMAKE_CXX_COMPILER=/usr/bin/g++-11 \
+  -DCMAKE_PREFIX_PATH=/opt/gappp/dpdk/ \
   ..
 ```
 
