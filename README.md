@@ -69,3 +69,16 @@ Looks like this:
 To test on testbeds, use something like `sudo ./gappp -w 41:00.0 -- --module l3fwd --route /path/to/simple-routes`
 
 To inject traffic, use a virtual device: `--vdev 'net_pcap0,rx_pcap=input.pcap,tx_pcap=output.pcap'` as part of DPDK EAL parameters.
+
+To test with routing table in `test-inputs/test-routes`, start main program with the following arguments and send traffic to 192.168.0.{10,20,30,40}.
+
+```
+sudo ./gappp -w 41:00.0 \
+  --vdev 'net_pcap1,tx_pcap=net_pcap1.pcap' \
+  --vdev 'net_pcap2,tx_pcap=net_pcap2.pcap' \
+  --vdev 'net_pcap3,tx_pcap=net_pcap3.pcap' \
+  --vdev 'net_pcap4,tx_pcap=net_pcap4.pcap' \
+  -- \
+  --module l3fwd --route /path/to/test-routes \
+  -n 5 -p 0:4 -p 1:1 -p 2:1 -p 3:1 -p 4:1
+```
