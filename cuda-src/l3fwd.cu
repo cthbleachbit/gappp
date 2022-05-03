@@ -34,8 +34,6 @@ namespace GAPPP {
 
 		__device__ inline char *gappp_l3fwd_pktmbuf_adj(struct rte_mbuf *m, uint16_t len)
 		{
-			__rte_mbuf_sanity_check(m, 1);
-
 			if (unlikely(len > m->data_len))
 				return nullptr;
 
@@ -48,21 +46,14 @@ namespace GAPPP {
 			return (char *)m->buf_addr + m->data_off;
 		}
 
-		__global__ void prefixMatch(struct rte_mbuf **packets) {
+		__global__ void prefixMatch(unsigned int* dst_addrs, uint16_t *ports) {
 			int i = threadIdx.x;
-			rte_mbuf* packet = packets[i];
 
 			uint32_t max_mask = 0;
 			int max_ind = -1;
-			gappp_l3fwd_pktmbuf_adj(packet, (uint16_t) sizeof(struct rte_ether_hdr));
 
 			/* if this is an IPv4 packet */
-			struct rte_ipv4_hdr *ip_hdr;
-			uint32_t ip_dst;
-
-			/* Read the lookup key (i.e. ip_dst) from the input packet */
-			ip_hdr = rte_pktmbuf_mtod(packet, struct rte_ipv4_hdr *);
-			ip_dst = ip_hdr->dst_addr;
+			uint32_t ip_dst = dst_addrs[i];
 
 			uint32_t b0, b1, b2, b3;
 
@@ -75,23 +66,42 @@ namespace GAPPP {
 
 			for (int j = 0; j < numroutes; j++) {
 				if ((ip_dst & routes[j].mask) == routes[j].network) {
-					if (routes[j].mask > max_mask) {
+					if (routes[j].mask >= max_mask) {
 						max_mask = routes[j].mask;
 						max_ind = j;
 					}
 				}
 			}
 
-			packet->port = max_ind > 0 ? routes[max_ind].out_port : UINT16_MAX;
+			ports[i] = max_ind >= 0 ? routes[max_ind].out_port : UINT16_MAX;
 
-			printf("Going to port %u\n", packet->port);
+			printf("Going to port %u\n", ports[i]);
 		}
 
 
 		int invoke(unsigned int nbr_tasks, struct rte_mbuf **packets) {
 			whine(Severity::INFO, fmt::format("L3FWD kernel invocation with {}", nbr_tasks), "L3FWD");
-			prefixMatch<<<1, nbr_tasks >>>(packets);
+			unsigned int *gpu_dst_ips;
+			uint16_t *gpu_ports;
+			cudaMalloc(&gpu_dst_ips, nbr_tasks * sizeof(unsigned int));
+			cudaMalloc(&gpu_ports, nbr_tasks * sizeof(uint16_t));
+			for (int i = 0; i < nbr_tasks; i++) {
+				/* Read the lookup key (i.e. ip_dst) from the input packet */
+				struct rte_ipv4_hdr *ip_hdr;
+				ip_hdr = rte_pktmbuf_mtod_offset(packets[i], struct rte_ipv4_hdr *, sizeof(rte_ether_hdr));
+				unsigned int ip_dst = ip_hdr->dst_addr;
+				printf("Post IP addr\n");
+				cudaMemcpy((void *) (gpu_dst_ips + i), &ip_dst, sizeof(unsigned int), cudaMemcpyHostToDevice);
+			}
 			cudaDeviceSynchronize();
+			prefixMatch<<<1, nbr_tasks >>>(gpu_dst_ips, gpu_ports);
+			cudaDeviceSynchronize();
+			for (int i = 0; i < nbr_tasks; i++) {
+				cudaMemcpy(&(packets[i]->port), (void *) (gpu_ports + i), sizeof(uint16_t), cudaMemcpyDeviceToHost);
+			}
+			cudaDeviceSynchronize();
+			cudaFree(gpu_dst_ips);
+			cudaFree(gpu_ports);
 			return 0;
 		}
 
