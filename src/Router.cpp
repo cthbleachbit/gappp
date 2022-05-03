@@ -278,12 +278,19 @@ namespace GAPPP {
 			tx_ring = this->ring_tx.at(id);
 		}
 		catch (std::out_of_range &e) {
+			for (int i = 0; i < len; i++) {
+				rte_pktmbuf_free(packets[i]);
+			}
 			whine(Severity::WARN, fmt::format("No TX buffer allocated for {}", id), GAPPP_LOG_ROUTER);
 		};
 		unsigned int ret = rte_ring_enqueue_burst(tx_ring, reinterpret_cast<void *const *>(packets), len, nullptr);
 		if (ret < len) {
 			whine(Severity::WARN,
 			      fmt::format("TX buffer {}: {} enqueue requested > {} enqueued", id, len, ret),
+			      GAPPP_LOG_ROUTER);
+		} else {
+			whine(Severity::INFO,
+			      fmt::format("TX buffer {}: {} enqueued", id, len),
 			      GAPPP_LOG_ROUTER);
 		}
 		return len - ret;
