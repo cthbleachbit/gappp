@@ -92,7 +92,7 @@ namespace GAPPP {
 		}
 
 		// Allocate TX ring buffers for workers
-		for (uint16_t i = 0; i < GAPPP_ROUTER_THREADS_PER_PORT; i++) {
+		for (uint16_t i = 0; i < n_queue; i++) {
 			struct router_thread_ident ident{port_id, i};
 			if (likely(!this->ring_tx.contains(ident))) {
 				std::string name = fmt::format("TX ring {}", ident);
