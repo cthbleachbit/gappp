@@ -40,7 +40,7 @@ namespace GAPPP {
 
 		//find the mask
 		std::string mask = addr.substr(slash + 1, addr.length());
-		r.mask = 0xffffffffu << (32 - stoi(mask));
+		r.mask = (uint32_t) (0xfffffffful << (32 - stoi(mask)));
 
 		r.gateway = 0;
 

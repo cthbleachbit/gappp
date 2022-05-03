@@ -82,13 +82,16 @@ namespace GAPPP {
 				}
 			}
 
-			packet->port = routes[max_ind].out_port;
+			packet->port = max_ind > 0 ? routes[max_ind].out_port : UINT16_MAX;
+
+			printf("Going to port %u\n", packet->port);
 		}
 
 
 		int invoke(unsigned int nbr_tasks, struct rte_mbuf **packets) {
 			whine(Severity::INFO, fmt::format("L3FWD kernel invocation with {}", nbr_tasks), "L3FWD");
 			prefixMatch<<<1, nbr_tasks >>>(packets);
+			cudaDeviceSynchronize();
 			return 0;
 		}
 
