@@ -46,7 +46,7 @@
 // Slots to reserve in the ring_tasks buffer
 #define GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT 4096
 // Number of tasks to dequeue in one shot
-#define GAPPP_GPU_HELM_TASK_BURST 16U
+#define GAPPP_GPU_HELM_TASK_BURST 64U
 // Preallocate minion asynchronous results
 #define GAPPP_GPU_FUTURE_PREALLOCATE 10
 // GPU logging identifier
