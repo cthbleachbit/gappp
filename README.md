@@ -83,3 +83,16 @@ sudo ./gappp -w 41:00.0 \
   --module l3fwd --route /path/to/test-routes \
   -n 5 -p 0:4 -p 1:1 -p 2:1 -p 3:1 -p 4:1
 ```
+
+# Building DPDK on testbed for GPU direct
+
+Assuming `v22.03`, export the following environment variable:
+
+- `CFLAGS=-I/usr/local/cuda-11.6/include`
+- `CC=/usr/bin/gcc-11`
+- `CXX=/usr/bin/g++-11`
+
+For meson configuration, use
+
+- `-Dprefix=/opt/gappp/dpdk`
+- `-Db_lto=true`
