@@ -3,6 +3,7 @@
 //
 
 #include "l3fwd-direct.h"
+#include <rte_gpudev.h>
 
 namespace GAPPP {
 	namespace l3direct {

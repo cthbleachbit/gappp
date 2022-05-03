@@ -56,7 +56,7 @@
 
 namespace GAPPP {
 	class Router;
-	class GPUHelm;
+	class GPUHelmBase;
 }
 
 namespace GAPPP {
@@ -105,7 +105,7 @@ namespace GAPPP {
 	class Router {
 	private:
 		std::default_random_engine &rng_engine;
-		GPUHelm *g = nullptr;
+		GPUHelmBase *g = nullptr;
 	public:
 		// Set of ports. Use rte_eth_dev_info_get to obtain rte_eth_dev_info, maps to number of queues
 		std::unordered_map<uint16_t, uint16_t> ports{};
@@ -161,7 +161,7 @@ namespace GAPPP {
 		 * Assign GPU helm to router - helm will be used to submit RX'd packets
 		 * @param helm
 		 */
-		inline void assign_gpu_helm(GPUHelm *helm) noexcept {
+		inline void assign_gpu_helm(GPUHelmBase *helm) noexcept {
 			this->g = helm;
 		}
 
@@ -193,8 +193,50 @@ struct fmt::formatter<GAPPP::router_thread_ident> {
 };
 
 namespace GAPPP {
+	class GPUHelmBase {
+	public:
+		/**
+		 * Construct a GPU helm and allocate associated message ring buffers
+		 */
+		GPUHelmBase() = default;
 
-	class GPUHelm {
+		/**
+		 * Free the associated data structures
+		 */
+		virtual ~GPUHelmBase() = default;
+
+		/**
+		 * Submit tasks to the GPU Helm
+		 * @param thread_id identity of running thread
+		 * @param task      incoming packet to process
+		 *                  the packet buffer are allocated from within CPU worker from the memory pool
+		 *                  ownership is transferred to GPU-helm - will be freed after DMA to GPU.
+		 * @return    0 if submission was successful
+		 */
+		virtual unsigned int submit_rx(router_thread_ident thread_id, router_thread_local_mbuf *task) = 0;
+
+		/**
+		 * Submit tasks to the GPU Helm
+		 * @param thread_id identity of running thread
+		 * @param len       number of packets to enqueue
+		 * @param task      incoming packet to process
+		 *                  the packet buffer are allocated from within CPU worker from the memory pool
+		 *                  ownership is transferred to GPU-helm - will be freed after DMA to GPU.
+		 * @return    0   if submission was successful
+		 *            NUM if NUM packets were left out due to space issues
+		 */
+		virtual unsigned int submit_rx(router_thread_ident thread_id, size_t len, struct rte_mbuf *const *task) = 0;
+
+		/**
+		 * GPU main event loop
+		 * @param stop     terminate when stop is true
+		 */
+		virtual void gpu_helm_event_loop(const volatile bool *stop) {};
+
+		virtual void assign_router(Router *router) {};
+	};
+
+	class GPUHelm : public GPUHelmBase {
 		// Incoming buffers - CPU workers will submit_rx tasks to this ring buffer
 		// Note that this buffer is multi-producer/single-consumer.
 		struct rte_ring *ring_tasks = nullptr;
@@ -222,7 +264,7 @@ namespace GAPPP {
 		/**
 		 * Free the associated data structures
 		 */
-		~GPUHelm();
+		~GPUHelm() override;
 
 		/**
 		 * Submit tasks to the GPU Helm
@@ -232,7 +274,7 @@ namespace GAPPP {
 		 *                  ownership is transferred to GPU-helm - will be freed after DMA to GPU.
 		 * @return    0 if submission was successful
 		 */
-		unsigned int submit_rx(router_thread_ident thread_id, router_thread_local_mbuf *task);
+		unsigned int submit_rx(router_thread_ident thread_id, router_thread_local_mbuf *task) override;
 
 		/**
 		 * Submit tasks to the GPU Helm
@@ -244,15 +286,15 @@ namespace GAPPP {
 		 * @return    0   if submission was successful
 		 *            NUM if NUM packets were left out due to space issues
 		 */
-		unsigned int submit_rx(router_thread_ident thread_id, size_t len, struct rte_mbuf *const *task);
+		unsigned int submit_rx(router_thread_ident thread_id, size_t len, struct rte_mbuf *const *task) override;
 
 		/**
 		 * GPU main event loop
 		 * @param stop     terminate when stop is true
 		 */
-		void gpu_helm_event_loop(const volatile bool *stop);
+		void gpu_helm_event_loop(const volatile bool *stop) override;
 
-		void inline assign_router(Router *router) {
+		void inline assign_router(Router *router) override {
 			this->r = router;
 		}
 
@@ -266,7 +308,6 @@ namespace GAPPP {
 		int
 		gpu_minion_thread(unsigned int nbr_tasks, std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST> *packets);
 	};
-
 }
 
 #endif //COMPONENTS_H

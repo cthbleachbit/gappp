@@ -38,7 +38,7 @@ namespace GAPPP {
 int main(int argc, char **argv) {
 	int ret;
 	GAPPP::Router *router = nullptr;
-	GAPPP::GPUHelm *helm = nullptr;
+	GAPPP::GPUHelmBase *helm = nullptr;
 	volatile bool stop = false;
 	std::future<void> r_thread;
 	std::future<void> g_thread;
