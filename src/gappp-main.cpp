@@ -74,15 +74,17 @@ int main(int argc, char **argv) {
 	static struct option long_options[] = {
 		{"module", required_argument, nullptr, 'm'},
 		{"route", required_argument, nullptr, 'r'},
+		{"num-ports", required_argument, nullptr, 'n'},
 		{nullptr, 0, nullptr, 0},
 	};
 
 	GAPPP::cuda_module_t module = GAPPP::dummy::invoke;
 	std::string option_route_table;
 	std::string option_module;
+	int num_ports = 1;
 	while (true) {
 		int option_index = 0;
-		int c = getopt_long(argc, argv, "m:r:", long_options, &option_index);
+		int c = getopt_long(argc, argv, "m:r:n:", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -94,6 +96,9 @@ int main(int argc, char **argv) {
 				break;
 			case 'r':
 				option_route_table = std::string(optarg);
+				break;
+			case 'n':
+				num_ports = std::atoi(optarg);
 				break;
 			default:
 				GAPPP::whine(GAPPP::Severity::WARN, fmt::format("Unknown argument {}", optarg), "Main");
@@ -118,8 +123,9 @@ int main(int argc, char **argv) {
 	// Link router to GPU helm
 	helm->assign_router(router);
 	router->assign_gpu_helm(helm);
-
-	router->dev_probe(0);
+	for (int i = 0; i < num_ports; i++) {
+		router->dev_probe(i);
+	}
 
 	// TODO: Start event loop
 	prctl(PR_SET_NAME, "Main");
@@ -130,10 +136,10 @@ int main(int argc, char **argv) {
 		using namespace std::chrono_literals;
 		while (r_thread.wait_for(5s) != std::future_status::ready) {
 			if (stop) GAPPP::whine(GAPPP::Severity::INFO, "Waiting for router event loop to exit", "Main");
-		};
+		}
 		while (g_thread.wait_for(5s) != std::future_status::ready) {
 			if (stop) GAPPP::whine(GAPPP::Severity::INFO, "Waiting for gpu event loop to exit", "Main");
-		};
+		}
 	}
 
 	// END

@@ -73,7 +73,7 @@ namespace GAPPP {
 			                                 this->packet_memory_pool[port_id]);
 			if (ret_val < 0)
 				whine(Severity::CRIT,
-				      fmt::format("port {}: RX queue {} setup failed (res={})", port_id, i, ret_val),
+				      fmt::format("port {}: RX queue {} setup failed : {}", port_id, i, ret_val, rte_strerror(ret_val)),
 				      GAPPP_LOG_ROUTER);
 		}
 
@@ -87,7 +87,7 @@ namespace GAPPP {
 			                                 &txq_conf);
 			if (ret_val < 0)
 				whine(Severity::CRIT,
-				      fmt::format("port {}: TX queue {} setup failed (res={})", port_id, i, ret_val),
+				      fmt::format("port {}: TX queue {} setup failed: {}", port_id, i, rte_strerror(ret_val)),
 				      GAPPP_LOG_ROUTER);
 		}
 

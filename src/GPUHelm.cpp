@@ -49,11 +49,10 @@ namespace GAPPP {
 			      GAPPP_LOG_GPU_HELM);
 		}
 
-		routing_table table;
-		table = GAPPP::parse_table(input_file);
-		int x = GAPPP::l3fwd::setTable(table);
+		routes = GAPPP::parse_table(input_file);
+		int x = GAPPP::l3fwd::setTable(routes);
 		whine(Severity::INFO, "Routing table loaded", GAPPP_LOG_GPU_HELM);
-		GAPPP::printTablePrinter(table, cout);
+		GAPPP::printTablePrinter(routes, cout);
 	}
 
 	GPUHelm::~GPUHelm() {
@@ -95,15 +94,24 @@ namespace GAPPP {
 		std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST> local_completion{};
 		int nbr_local_tasks = 0;
 
+		// Sanity check the routing table - port must exist
+		for (const auto &route: this->routes) {
+			if (unlikely(!r->ports.contains(route.out_port))) {
+				whine(Severity::CRIT,
+				      fmt::format("Port {} specified in the routing table doesn't exist", route.out_port),
+				      GAPPP_LOG_GPU_HELM);
+			}
+		}
+
 		whine(Severity::INFO, "Entering event loop", GAPPP_LOG_GPU_HELM);
 
 		while (!*stop) {
 			// Note: ownership is transferred into minion - free after use
 			auto local_tasks = new std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST>();
 			nbr_local_tasks = rte_ring_dequeue_burst(this->ring_tasks,
-			                                        (void **) local_tasks->data(),
-			                                        GAPPP_GPU_HELM_TASK_BURST,
-			                                        nullptr);
+			                                         (void **) local_tasks->data(),
+			                                         GAPPP_GPU_HELM_TASK_BURST,
+			                                         nullptr);
 			if (nbr_local_tasks > 0) {
 				// TODO: spawn GPU minions that launches CUDA contexts
 				this->running.emplace_back(std::async(std::launch::async, [nbr_local_tasks, local_tasks, this] {

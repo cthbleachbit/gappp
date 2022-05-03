@@ -21,7 +21,7 @@
 // Number of receive descriptors
 #define GAPPP_DEFAULT_RX_DESC (1 << 4)
 // Router worker threads count
-#define GAPPP_ROUTER_THREADS_PER_PORT  4
+#define GAPPP_ROUTER_THREADS_PER_PORT 1
 // Number of transmit queue
 #define GAPPP_DEFAULT_TX_QUEUE GAPPP_ROUTER_THREADS_PER_PORT
 // Number of receive queue
@@ -207,8 +207,8 @@ namespace GAPPP {
 		// Pointer to initialized router instance - ownership is borrowed (i.e. not to be freed)
 		Router *r = nullptr;
 
-		// Pointer to gpu routing table
-		gpu_routing_table *rtable = nullptr;
+		// Routing table for sanity check
+		routing_table routes{};
 
 		// Entry point to module invocation
 		GAPPP::cuda_module_t &module_invoke;
