@@ -51,6 +51,8 @@
 #define GAPPP_GPU_FUTURE_PREALLOCATE 10
 // GPU logging identifier
 #define GAPPP_LOG_GPU_HELM "GPU Helm"
+// GPU logging identifier
+#define GAPPP_LOG_GPU_DIRECT_HELM "GPU Direct Helm"
 
 // FORWARD DECLARATION
 
@@ -211,16 +213,6 @@ namespace GAPPP {
 		/**
 		 * Submit tasks to the GPU Helm
 		 * @param thread_id identity of running thread
-		 * @param task      incoming packet to process
-		 *                  the packet buffer are allocated from within CPU worker from the memory pool
-		 *                  ownership is transferred to GPU-helm - will be freed after DMA to GPU.
-		 * @return    0 if submission was successful
-		 */
-		virtual unsigned int submit_rx(router_thread_ident thread_id, router_thread_local_mbuf *task) = 0;
-
-		/**
-		 * Submit tasks to the GPU Helm
-		 * @param thread_id identity of running thread
 		 * @param len       number of packets to enqueue
 		 * @param task      incoming packet to process
 		 *                  the packet buffer are allocated from within CPU worker from the memory pool
@@ -280,7 +272,7 @@ namespace GAPPP {
 		 *                  ownership is transferred to GPU-helm - will be freed after DMA to GPU.
 		 * @return    0 if submission was successful
 		 */
-		unsigned int submit_rx(router_thread_ident thread_id, router_thread_local_mbuf *task) override;
+		unsigned int submit_rx(router_thread_ident thread_id, router_thread_local_mbuf *task);
 
 		/**
 		 * Submit tasks to the GPU Helm
@@ -365,16 +357,6 @@ namespace GAPPP {
 		void inline assign_router(Router *router) override {
 			this->r = router;
 		}
-
-	private:
-		/**
-		 * Launch a GPU asynchronous task to process nbr_tasks packets, referred as pointers in packets.
-		 * @param nbr_tasks
-		 * @param packets     Note: needs to be freed after use [transfer full]
-		 * @return
-		 */
-		int
-		gpu_minion_thread(unsigned int nbr_tasks, std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST> *packets);
 	};
 #endif
 }

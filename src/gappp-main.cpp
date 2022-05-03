@@ -42,6 +42,9 @@ int main(int argc, char **argv) {
 	volatile bool stop = false;
 	std::future<void> r_thread;
 	std::future<void> g_thread;
+#ifdef GAPPP_GPU_DIRECT
+	bool use_gpu_direct = false;
+#endif
 
 	/**
 	 * Actual shutdown handler - issue stop
@@ -76,6 +79,9 @@ int main(int argc, char **argv) {
 		{"route", required_argument, nullptr, 'r'},
 		{"num-ports", required_argument, nullptr, 'n'},
 		{"port-queue", required_argument, nullptr, 'p'},
+#ifdef GAPPP_GPU_DIRECT
+		{"gpu-direct", no_argument, nullptr, 'g'},
+#endif
 		{nullptr, 0, nullptr, 0},
 	};
 
@@ -90,7 +96,11 @@ int main(int argc, char **argv) {
 		uint16_t q;
 		decltype(std::string("").begin()) off;
 		std::string arg;
+#ifdef GAPPP_GPU_DIRECT
+		int c = getopt_long(argc, argv, "m:r:n:p:g", long_options, &option_index);
+#else
 		int c = getopt_long(argc, argv, "m:r:n:p:", long_options, &option_index);
+#endif
 		if (c == -1)
 			break;
 
@@ -112,6 +122,12 @@ int main(int argc, char **argv) {
 				p = std::stoi(std::string(arg.begin(), off));
 				q = std::stoi(std::string(off + 1, arg.end()));
 				port_queues[p] = q;
+				break;
+#ifdef GAPPP_GPU_DIRECT
+			case 'g':
+				use_gpu_direct = true;
+				break;
+#endif
 			default:
 				GAPPP::whine(GAPPP::Severity::WARN, fmt::format("Unknown argument {}", optarg), "Main");
 		}
@@ -128,7 +144,15 @@ int main(int argc, char **argv) {
 		GAPPP::whine(GAPPP::Severity::CRIT, "No module specified! Use -m [l3fwd|dummy].", "Main");
 	}
 	// TODO: Create GPU Helm
+#ifdef GAPPP_GPU_DIRECT
+	if (use_gpu_direct) {
+		helm = new GAPPP::GPUDirectHelm(module, option_route_table);
+	} else {
+		helm = new GAPPP::GPUHelm(module, option_route_table);
+	}
+#else
 	helm = new GAPPP::GPUHelm(module, option_route_table);
+#endif
 
 	// TODO: Create router instance
 	router = new GAPPP::Router(rng_engine);
