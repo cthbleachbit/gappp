@@ -278,7 +278,7 @@ namespace GAPPP {
 			tx_ring = this->ring_tx.at(id);
 		}
 		catch (std::out_of_range &e) {
-			whine(Severity::CRIT, fmt::format("No TX buffer allocated for {}", id), GAPPP_LOG_ROUTER);
+			whine(Severity::WARN, fmt::format("No TX buffer allocated for {}", id), GAPPP_LOG_ROUTER);
 		};
 		unsigned int ret = rte_ring_enqueue_burst(tx_ring, reinterpret_cast<void *const *>(packets), len, nullptr);
 		if (ret < len) {
