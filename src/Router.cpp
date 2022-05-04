@@ -9,6 +9,8 @@
 #include <sys/prctl.h>
 #include <random>
 #include <rte_ethdev.h>
+#include <rte_dmadev.h>
+#include <rte_malloc.h>
 
 #ifndef ETH_MQ_RX_NONE
 #define RTE_ETH_MQ_RX_NONE ETH_MQ_RX_NONE
@@ -271,14 +273,32 @@ namespace GAPPP {
 
 	void Router::allocate_packet_memory_buffer(unsigned int n_packet, uint16_t port) {
 		if (this->packet_memory_pool[port] == nullptr) {
+			struct rte_eth_dev_info eth_info;
 			std::string pool_name = fmt::format("Packet memory pool/{}", port);
-			this->packet_memory_pool[port] =
+			if (g->is_direct()) {
+				// Allocate external memory for gpu direct
+				external_mem.elt_size = GAPPP_DIRECT_MBUF_DATAROOM + RTE_PKTMBUF_HEADROOM;
+				external_mem.buf_len = RTE_ALIGN_CEIL(n_packet * external_mem.elt_size, GAPPP_GPU_PAGE_SIZE);
+				external_mem.buf_ptr = rte_malloc(pool_name.c_str(), external_mem.elt_size, GAPPP_GPU_PAGE_SIZE);
+				if (external_mem.buf_ptr == nullptr) {
+					whine(Severity::CRIT, fmt::format("External allocation for {} failed", pool_name), GAPPP_LOG_ROUTER);
+				}
+				rte_eth_dev_info_get(port, &eth_info);
+				int ret = rte_dev_dma_map(eth_info.device, external_mem.buf_ptr, external_mem.buf_iova, external_mem.buf_len);
+				if (ret < 0) {
+					whine(Severity::CRIT, "Failed to register DMA zone with NIC", GAPPP_LOG_ROUTER);
+				}
+				((GPUDirectHelm*) g)->register_ext_mem(external_mem);
+			} else {
+				// Allocate normal memory pool
+				this->packet_memory_pool[port] =
 					rte_pktmbuf_pool_create(pool_name.c_str(),
 					                        n_packet,
 					                        GAPPP_MEMPOOL_CACHE_SIZE,
 					                        0,
 					                        RTE_MBUF_DEFAULT_BUF_SIZE,
 					                        0);
+			}
 			if (this->packet_memory_pool[port] == nullptr) {
 				whine(Severity::CRIT, fmt::format("Allocation for {} failed", pool_name), GAPPP_LOG_ROUTER);
 			} else {

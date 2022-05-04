@@ -71,6 +71,8 @@ namespace GAPPP {
 	private:
 		std::default_random_engine &rng_engine;
 		GPUHelmBase *g = nullptr;
+		// Only used for GPU direct: External memory zone
+		struct rte_pktmbuf_extmem external_mem{};
 	public:
 		// Set of ports. Use rte_eth_dev_info_get to obtain rte_eth_dev_info, maps to number of queues
 		std::unordered_map<uint16_t, uint16_t> ports{};
@@ -333,6 +335,13 @@ namespace GAPPP {
 		bool is_direct() const noexcept override {
 			return true;
 		}
+
+		/**
+		 * Register Allocated external memory pool with GPU for DMA
+		 * @param external_mem
+		 * @return
+		 */
+		int register_ext_mem(const struct rte_pktmbuf_extmem &external_mem);
 	};
 #endif
 }

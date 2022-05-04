@@ -59,4 +59,14 @@ namespace GAPPP {
 		whine(Severity::INFO, "Terminating", GAPPP_LOG_GPU_HELM);
 	}
 
+	int GPUDirectHelm::register_ext_mem(const rte_pktmbuf_extmem &external_mem) {
+		int ret;
+
+		ret = rte_gpu_mem_register(GAPPP_GPU_ID, external_mem.buf_len, external_mem.buf_ptr);
+		if (ret < 0) {
+			whine(Severity::CRIT, "GPU external memory pool registration failed", GAPPP_LOG_GPU_DIRECT_HELM);
+		}
+		return 0;
+	}
+
 } // GAPPP

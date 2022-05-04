@@ -62,6 +62,7 @@ if (GAPPP_GPU_DIRECT)
 		set(GAPPP_GPU_DIRECT OFF)
 	else()
 		add_compile_definitions(GAPPP_GPU_DIRECT)
+		add_compile_definitions(ALLOW_EXPERIMENTAL_API)
 	endif()
 endif()
 

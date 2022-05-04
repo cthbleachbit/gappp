@@ -32,6 +32,11 @@
 // Router Logging identifier
 #define GAPPP_LOG_ROUTER "Router"
 
+
+#define GAPPP_DIRECT_MBUF_DATAROOM 2048
+#define GAPPP_GPU_PAGE_SIZE 4096
+
+#define GAPPP_GPU_ID 0
 // Slots to reserve in the ring_tasks buffer
 #define GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT 4096
 // Number of tasks to dequeue in one shot
