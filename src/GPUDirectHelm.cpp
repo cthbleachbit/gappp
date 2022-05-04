@@ -11,7 +11,7 @@ namespace GAPPP {
 	GPUDirectHelm::GPUDirectHelm(GAPPP::cuda_module_t &module_invoke, const std::string &path_route_table)
 		: module_invoke(module_invoke) {
 		// Do a GPU quick self test
-		if (GAPPP::selftest::invoke(0, nullptr) != 0) {
+		if (GAPPP::selftest::self_test(true) != 0) {
 			whine(Severity::CRIT, "GPU Self test failed", GAPPP_LOG_GPU_DIRECT_HELM);
 		} else {
 			whine(Severity::INFO, "GPU Self test completed", GAPPP_LOG_GPU_DIRECT_HELM);

@@ -49,7 +49,7 @@ cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja \
 # Command line arguments
 
 ### Parameters accepted
-- EAL parameter: `-w bus:dev.func` PCIe device address of the NIC to take over
+- EAL parameter: `-w bus:dev.func` PCIe device address of the NIC/GPU to take over
 - Use `--` to separate DPDK EAL options from program specific options
 - `-m|--module [l3fwd|dummy]` Use this CUDA module
 - `-r|--route routing_table_file` Load routing table from file
