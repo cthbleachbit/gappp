@@ -192,6 +192,11 @@ namespace GAPPP {
 		virtual void gpu_helm_event_loop(const volatile bool *stop) {};
 
 		virtual void assign_router(Router *router) {};
+
+		/**
+		 * @return whether the instance is using gpu direct
+		 */
+		virtual bool is_direct() const noexcept = 0;
 	};
 
 	/**
@@ -259,6 +264,10 @@ namespace GAPPP {
 			this->r = router;
 		}
 
+		bool is_direct() const noexcept override {
+			return false;
+		}
+
 	private:
 		/**
 		 * Launch a GPU asynchronous task to process nbr_tasks packets, referred as pointers in packets.
@@ -319,6 +328,10 @@ namespace GAPPP {
 
 		void inline assign_router(Router *router) override {
 			this->r = router;
+		}
+
+		bool is_direct() const noexcept override {
+			return true;
 		}
 	};
 #endif
