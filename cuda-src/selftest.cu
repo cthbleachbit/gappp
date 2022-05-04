@@ -42,6 +42,7 @@ namespace GAPPP {
 				if (rte_gpu_info_get(0, &gpu_info)) {
 					whine(Severity::CRIT, "DPDK cannot probe GPU info", GAPPP_LOG_SELFTEST);
 				}
+				whine(Severity::INFO, fmt::format("DPDK is using GPU {} with {} processors", gpu_info.name, gpu_info.processor_count), GAPPP_LOG_GPU_DIRECT_HELM);
 				struct rte_gpu_comm_list *comm_list = rte_gpu_comm_create_list(0, GAPPP_GPU_HELM_TASK_BURST);
 				if (comm_list == nullptr) {
 					whine(Severity::CRIT, "Cannot create GPU communication list", GAPPP_LOG_SELFTEST);

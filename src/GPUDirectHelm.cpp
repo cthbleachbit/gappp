@@ -1,5 +1,6 @@
 #include <fstream>
 #include <sys/prctl.h>
+#include <rte_gpudev.h>
 
 #include "components.h"
 #include "Logging.h"
@@ -49,6 +50,7 @@ namespace GAPPP {
 		}
 
 		whine(Severity::INFO, "Entering event loop", GAPPP_LOG_GPU_HELM);
+
 
 		while (!*stop) {
 			// TODO: event loop
