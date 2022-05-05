@@ -141,6 +141,9 @@ namespace GAPPP {
 		if (ret_val < 0)
 			whine(Severity::CRIT, fmt::format("Start port {} failed (res={})", port_id, ret_val), GAPPP_LOG_ROUTER);
 
+		// Go into promiscuous mode to catch all incoming packets
+		rte_eth_promiscuous_enable(port_id);
+
 		struct rte_ether_addr addr{};
 		ret_val = rte_eth_macaddr_get(port_id, &addr);
 		if (ret_val != 0)
