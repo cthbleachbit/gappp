@@ -278,20 +278,30 @@ namespace GAPPP {
 			if (g->is_direct()) {
 #ifdef GAPPP_GPU_DIRECT
 				// Allocate external memory for gpu direct
+				std::string zone_name = fmt::format("Shared DMA zone/{}", port);
 				external_mem.elt_size = GAPPP_DIRECT_MBUF_DATAROOM + RTE_PKTMBUF_HEADROOM;
 				external_mem.buf_len = RTE_ALIGN_CEIL(n_packet * external_mem.elt_size, GAPPP_GPU_PAGE_SIZE);
-				external_mem.buf_ptr = rte_malloc(pool_name.c_str(), external_mem.elt_size, GAPPP_GPU_PAGE_SIZE);
+				external_mem.buf_ptr = rte_malloc(zone_name.c_str(), external_mem.buf_len, GAPPP_GPU_PAGE_SIZE);
 				if (external_mem.buf_ptr == nullptr) {
 					whine(Severity::CRIT, fmt::format("External allocation for {} failed", pool_name), GAPPP_LOG_ROUTER);
 				}
-				rte_eth_dev_info_get(port, &eth_info);
-				// FIXME: undefined reference to `rte_dev_dma_map(rte_device*, void*, unsigned long, unsigned long)'
 
+				// Register external buffer memory region for GPU DMA
+				rte_eth_dev_info_get(port, &eth_info);
+				((GPUDirectHelm*) g)->register_ext_mem(external_mem);
+
+				// Register external buffer memory region for NIC DMA
 				int ret = rte_dev_dma_map(eth_info.device, external_mem.buf_ptr, external_mem.buf_iova, external_mem.buf_len);
 				if (ret < 0) {
 					whine(Severity::CRIT, "Failed to register DMA zone with NIC", GAPPP_LOG_ROUTER);
+				} else {
+					whine(Severity::INFO, "Registered DMA zone with NIC", GAPPP_LOG_ROUTER);
 				}
-				((GPUDirectHelm*) g)->register_ext_mem(external_mem);
+
+				// Allocate pktmbuf wrapper
+				this->packet_memory_pool[port] = rte_pktmbuf_pool_create_extbuf(pool_name.c_str(), n_packet,
+				                               0, 0, external_mem.elt_size,
+				                               GAPPP_DEFAULT_SOCKET_ID, &external_mem, 1);
 #else
 				whine(Severity::CRIT, "Unreachable code path", GAPPP_LOG_ROUTER);
 #endif
