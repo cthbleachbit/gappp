@@ -285,10 +285,13 @@ namespace GAPPP {
 					whine(Severity::CRIT, fmt::format("External allocation for {} failed", pool_name), GAPPP_LOG_ROUTER);
 				}
 				rte_eth_dev_info_get(port, &eth_info);
+				// FIXME: undefined reference to `rte_dev_dma_map(rte_device*, void*, unsigned long, unsigned long)'
+				/*
 				int ret = rte_dev_dma_map(eth_info.device, external_mem.buf_ptr, external_mem.buf_iova, external_mem.buf_len);
 				if (ret < 0) {
 					whine(Severity::CRIT, "Failed to register DMA zone with NIC", GAPPP_LOG_ROUTER);
 				}
+				 */
 				((GPUDirectHelm*) g)->register_ext_mem(external_mem);
 #else
 				whine(Severity::CRIT, "Unreachable code path", GAPPP_LOG_ROUTER);
