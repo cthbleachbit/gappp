@@ -7,9 +7,9 @@
 
 #include <fmt/format.h>
 #include <sys/prctl.h>
+#include <rte_eal.h>
 #include <random>
 #include <rte_ethdev.h>
-#include <rte_dmadev.h>
 #include <rte_malloc.h>
 
 #ifndef ETH_MQ_RX_NONE
@@ -273,7 +273,7 @@ namespace GAPPP {
 
 	void Router::allocate_packet_memory_buffer(unsigned int n_packet, uint16_t port) {
 		if (this->packet_memory_pool[port] == nullptr) {
-			struct rte_eth_dev_info eth_info;
+			struct rte_eth_dev_info eth_info{};
 			std::string pool_name = fmt::format("Packet memory pool/{}", port);
 			if (g->is_direct()) {
 #ifdef GAPPP_GPU_DIRECT
@@ -286,12 +286,11 @@ namespace GAPPP {
 				}
 				rte_eth_dev_info_get(port, &eth_info);
 				// FIXME: undefined reference to `rte_dev_dma_map(rte_device*, void*, unsigned long, unsigned long)'
-				/*
+
 				int ret = rte_dev_dma_map(eth_info.device, external_mem.buf_ptr, external_mem.buf_iova, external_mem.buf_len);
 				if (ret < 0) {
 					whine(Severity::CRIT, "Failed to register DMA zone with NIC", GAPPP_LOG_ROUTER);
 				}
-				 */
 				((GPUDirectHelm*) g)->register_ext_mem(external_mem);
 #else
 				whine(Severity::CRIT, "Unreachable code path", GAPPP_LOG_ROUTER);
