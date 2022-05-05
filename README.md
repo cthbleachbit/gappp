@@ -49,12 +49,13 @@ cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja \
 # Command line arguments
 
 ### Parameters accepted
-- EAL parameter: `-w bus:dev.func` PCIe device address of the NIC/GPU to take over
+- EAL parameter: `-a bus:dev.func` PCIe device address of the NIC/GPU to take over (as of DPDK 22.03)
 - Use `--` to separate DPDK EAL options from program specific options
 - `-m|--module [l3fwd|dummy]` Use this CUDA module
 - `-r|--route routing_table_file` Load routing table from file
 - `-n|--num-ports X` Declare number of ports available
 - `-p|--port-queue id:nq` Allocate `nq` TX and `nq` RX queues on port `id` (optional, default to 4. Note that some port drivers don't support MQ)
+- `-g|--gpu-direct` Use gpu-direct pipeline
 
 ### Routing table format:
 - `a.b.c.d/cidr (via <gateway>) dev <port_id>`
@@ -68,7 +69,7 @@ Looks like this:
 192.168.1.0/24 dev 1
 ```
 
-To test on testbeds, use something like `sudo ./gappp -w 41:00.0 -- --module l3fwd --route /path/to/simple-routes`
+To test on testbeds, use something like `sudo ./gappp -a 41:00.0 -- --module l3fwd --route /path/to/simple-routes`
 
 To inject traffic, use a virtual device: `--vdev 'net_pcap0,rx_pcap=input.pcap,tx_pcap=output.pcap'` as part of DPDK EAL parameters.
 
