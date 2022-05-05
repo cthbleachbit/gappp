@@ -72,7 +72,7 @@ namespace GAPPP {
 		std::default_random_engine &rng_engine;
 		GPUHelmBase *g = nullptr;
 		// Only used for GPU direct: External memory zone
-		struct rte_pktmbuf_extmem external_mem{};
+		std::unordered_map<uint16_t, struct rte_pktmbuf_extmem> external_mem{};
 	public:
 		// Set of ports. Use rte_eth_dev_info_get to obtain rte_eth_dev_info, maps to number of queues
 		std::unordered_map<uint16_t, uint16_t> ports{};
@@ -96,6 +96,11 @@ namespace GAPPP {
 		 * @return true if the device is initialized successfully and registered in the ports array
 		 */
 		bool dev_probe(uint16_t port_id, uint16_t n_queue) noexcept;
+
+		/**
+		 * Stop and remove a port from the router
+		 */
+		bool dev_stop(uint16_t port_id);
 
 		/**
 		 * Main thread event loop
@@ -342,6 +347,13 @@ namespace GAPPP {
 		 * @return
 		 */
 		int register_ext_mem(const struct rte_pktmbuf_extmem &external_mem);
+
+		/**
+		 * Unregister Allocated external memory pool with GPU for DMA
+		 * @param external_mem
+		 * @return
+		 */
+		int unregister_ext_mem(const struct rte_pktmbuf_extmem &external_mem);
 	};
 #endif
 }

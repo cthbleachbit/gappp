@@ -71,4 +71,16 @@ namespace GAPPP {
 		return 0;
 	}
 
+	int GPUDirectHelm::unregister_ext_mem(const rte_pktmbuf_extmem &external_mem) {
+		int ret;
+
+		ret = rte_gpu_mem_unregister(GAPPP_GPU_ID, external_mem.buf_ptr);
+		if (ret < 0) {
+			whine(Severity::CRIT, "Failed to unregister DMA zone from GPU", GAPPP_LOG_GPU_DIRECT_HELM);
+		} else {
+			whine(Severity::INFO, "Unregistered DMA zone with GPU", GAPPP_LOG_GPU_DIRECT_HELM);
+		}
+		return 0;
+	}
+
 } // GAPPP

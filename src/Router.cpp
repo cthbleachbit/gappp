@@ -158,6 +158,32 @@ namespace GAPPP {
 		return true;
 	}
 
+	bool Router::dev_stop(uint16_t port_id) {
+		if (!this->ports.contains(port_id)) {
+			whine(Severity::WARN, fmt::format("Attempting to stop nonexistent port {}", port_id), GAPPP_LOG_ROUTER);
+			return false;
+		}
+		whine(Severity::INFO, fmt::format("Stopping port {}", port_id), GAPPP_LOG_ROUTER);
+		rte_eth_dev_stop(port_id);
+		for (uint16_t i = 0; i < this->ports[port_id]; i++) {
+			rte_ring_free(this->ring_tx[{port_id, i}]);
+		}
+
+		whine(Severity::INFO, fmt::format("Releasing memory pool for {}", port_id), GAPPP_LOG_ROUTER);
+		if (g->is_direct()) {
+			struct rte_eth_dev_info eth_info{};
+			struct rte_pktmbuf_extmem &local_external_mem = this->external_mem[port_id];
+			rte_eth_dev_info_get(port_id, &eth_info);
+			rte_dev_dma_unmap(eth_info.device, local_external_mem.buf_ptr, local_external_mem.buf_iova, local_external_mem.buf_len);
+			((GPUDirectHelm*) g)->unregister_ext_mem(local_external_mem);
+			this->external_mem.erase(port_id);
+			rte_free(local_external_mem.buf_ptr);
+		}
+
+		rte_mempool_free(packet_memory_pool[port_id]);
+		packet_memory_pool[port_id] = nullptr;
+	}
+
 	struct router_worker_launch_parameter {
 		Router *r;
 		volatile bool *stop;
@@ -189,20 +215,6 @@ namespace GAPPP {
 			rte_eal_wait_lcore(worker.second);
 			this->workers.erase(worker.first);
 		}
-	}
-
-	static inline int
-	send_burst(struct router_thread_local_mbuf *buf, uint16_t port, uint16_t queueid) {
-		int ret;
-
-		ret = rte_eth_tx_burst(port, queueid, buf->m_table, buf->len);
-		if (unlikely(ret < buf->len)) {
-			do {
-				rte_pktmbuf_free(buf->m_table[ret]);
-			} while (++ret < buf->len);
-		}
-
-		return 0;
 	}
 
 	void Router::port_queue_event_loop(struct router_thread_ident ident, volatile bool *stop) {
@@ -282,29 +294,32 @@ namespace GAPPP {
 #ifdef GAPPP_GPU_DIRECT
 				// Allocate external memory for gpu direct
 				std::string zone_name = fmt::format("Shared DMA zone/{}", port);
-				external_mem.elt_size = GAPPP_DIRECT_MBUF_DATAROOM + RTE_PKTMBUF_HEADROOM;
-				external_mem.buf_len = RTE_ALIGN_CEIL(n_packet * external_mem.elt_size, GAPPP_GPU_PAGE_SIZE);
-				external_mem.buf_ptr = rte_malloc(zone_name.c_str(), external_mem.buf_len, GAPPP_GPU_PAGE_SIZE);
-				if (external_mem.buf_ptr == nullptr) {
+				struct rte_pktmbuf_extmem local_external_mem{};
+				local_external_mem.elt_size = GAPPP_DIRECT_MBUF_DATAROOM + RTE_PKTMBUF_HEADROOM;
+				local_external_mem.buf_len = RTE_ALIGN_CEIL(n_packet * local_external_mem.elt_size, GAPPP_GPU_PAGE_SIZE);
+				local_external_mem.buf_ptr = rte_malloc(zone_name.c_str(), local_external_mem.buf_len, GAPPP_GPU_PAGE_SIZE);
+				if (local_external_mem.buf_ptr == nullptr) {
 					whine(Severity::CRIT, fmt::format("External allocation for {} failed", pool_name), GAPPP_LOG_ROUTER);
 				}
 
 				// Register external buffer memory region for GPU DMA
 				rte_eth_dev_info_get(port, &eth_info);
-				((GPUDirectHelm*) g)->register_ext_mem(external_mem);
+				((GPUDirectHelm*) g)->register_ext_mem(local_external_mem);
 
 				// Register external buffer memory region for NIC DMA
-				int ret = rte_dev_dma_map(eth_info.device, external_mem.buf_ptr, external_mem.buf_iova, external_mem.buf_len);
+				int ret = rte_dev_dma_map(eth_info.device, local_external_mem.buf_ptr, local_external_mem.buf_iova, local_external_mem.buf_len);
 				if (ret < 0) {
 					whine(Severity::CRIT, "Failed to register DMA zone with NIC", GAPPP_LOG_ROUTER);
 				} else {
 					whine(Severity::INFO, "Registered DMA zone with NIC", GAPPP_LOG_ROUTER);
 				}
 
+				this->external_mem.emplace(port, local_external_mem);
+
 				// Allocate pktmbuf wrapper
 				this->packet_memory_pool[port] = rte_pktmbuf_pool_create_extbuf(pool_name.c_str(), n_packet,
-				                               0, 0, external_mem.elt_size,
-				                               GAPPP_DEFAULT_SOCKET_ID, &external_mem, 1);
+				                               0, 0, local_external_mem.elt_size,
+				                               GAPPP_DEFAULT_SOCKET_ID, &local_external_mem, 1);
 #else
 				whine(Severity::CRIT, "Unreachable code path", GAPPP_LOG_ROUTER);
 #endif
@@ -362,20 +377,9 @@ namespace GAPPP {
 			rng_engine(rng_engine) {}
 
 	Router::~Router() noexcept {
-		int ret;
 		// Deallocate ring buffers
 		for (auto port: this->ports) {
-			whine(Severity::INFO, fmt::format("Stopping port {}", port.first), GAPPP_LOG_ROUTER);
-			rte_eth_dev_stop(port.first);
-			for (uint16_t i = 0; i < port.second; i++) {
-				rte_ring_free(this->ring_tx[{port.first, i}]);
-			}
-		}
-
-		// Clean up all devices and memory pools
-		for (auto port: this->ports) {
-			whine(Severity::INFO, fmt::format("Releasing memory pool for {}", port.first), GAPPP_LOG_ROUTER);
-			rte_mempool_free(packet_memory_pool[port.first]);
+			dev_stop(port.first);
 		}
 	}
 } // GAPPP
