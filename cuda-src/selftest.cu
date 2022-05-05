@@ -35,6 +35,7 @@ namespace GAPPP {
 		// https://github.com/NVIDIA/cuda-samples/blob/master/Samples/0_Introduction/simpleZeroCopy/simpleZeroCopy.cu
 		int self_test(bool try_direct) {
 			if (try_direct) {
+#ifdef GAPPP_GPU_DIRECT
 				struct rte_gpu_info gpu_info;
 				if (rte_gpu_count_avail() == 0) {
 					whine(Severity::CRIT, "DPDK cannot find usable GPU", GAPPP_LOG_SELFTEST);
@@ -51,7 +52,9 @@ namespace GAPPP {
 				}
 				rte_gpu_comm_destroy_list(comm_list, GAPPP_GPU_HELM_TASK_BURST);
 				return 0;
-
+#else
+				return -1;
+#endif
 			} else {
 
 				int device_count = 0;

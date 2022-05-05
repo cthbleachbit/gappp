@@ -276,6 +276,7 @@ namespace GAPPP {
 			struct rte_eth_dev_info eth_info;
 			std::string pool_name = fmt::format("Packet memory pool/{}", port);
 			if (g->is_direct()) {
+#ifdef GAPPP_GPU_DIRECT
 				// Allocate external memory for gpu direct
 				external_mem.elt_size = GAPPP_DIRECT_MBUF_DATAROOM + RTE_PKTMBUF_HEADROOM;
 				external_mem.buf_len = RTE_ALIGN_CEIL(n_packet * external_mem.elt_size, GAPPP_GPU_PAGE_SIZE);
@@ -289,6 +290,9 @@ namespace GAPPP {
 					whine(Severity::CRIT, "Failed to register DMA zone with NIC", GAPPP_LOG_ROUTER);
 				}
 				((GPUDirectHelm*) g)->register_ext_mem(external_mem);
+#else
+				whine(Severity::CRIT, "Unreachable code path", GAPPP_LOG_ROUTER);
+#endif
 			} else {
 				// Allocate normal memory pool
 				this->packet_memory_pool[port] =

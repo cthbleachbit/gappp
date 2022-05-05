@@ -89,7 +89,7 @@ sudo ./gappp -w 41:00.0 \
 
 Assuming `v22.03`, export the following environment variable:
 
-- `CFLAGS=-I/usr/local/cuda-11.6/include`
+- `CFLAGS=-I/usr/local/cuda-11.6/include -DALLOW_EXPERIMENTAL_API`
 - `CC=/usr/bin/gcc-11`
 - `CXX=/usr/bin/g++-11`
 
