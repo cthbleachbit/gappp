@@ -77,7 +77,8 @@ namespace GAPPP {
 		// Set of ports. Use rte_eth_dev_info_get to obtain rte_eth_dev_info, maps to number of queues
 		std::unordered_map<uint16_t, uint16_t> ports{};
 		// Maps <port number, queue_id> to worker watching on
-		std::unordered_map<router_thread_ident, decltype(rte_lcore_id()), router_thread_ident::hash> workers;
+		std::unordered_map<router_thread_ident, decltype(rte_lcore_id()), router_thread_ident::hash> tx_workers;
+		std::unordered_map<router_thread_ident, decltype(rte_lcore_id()), router_thread_ident::hash> rx_workers;
 		// Allocate workers to CPUs as we go
 		std::array<router_thread_ident, GAPPP_MAX_CPU> workers_affinity{};
 		// Pointers to per-NIC packet buffers, can be made NUMA aware but assuming 1 socket here.
@@ -102,12 +103,17 @@ namespace GAPPP {
 		 */
 		bool dev_stop(uint16_t port_id);
 
-		/**
-		 * Main thread event loop
-		 * @param ident  thread identification
-		 * @param stop   set to false to jump out of the loop
+		/** Main thread event loop - RX only
+		 * @param ident
+		 * @param stop
 		 */
-		void port_queue_event_loop(struct router_thread_ident ident, volatile bool *stop);
+		void port_queue_rx_loop(struct router_thread_ident ident, volatile bool *stop);
+
+		/** Main thread event loop - TX only
+		 * @param ident
+		 * @param stop
+		 */
+		void port_queue_tx_loop(struct router_thread_ident ident, volatile bool *stop);
 
 		/**
 		 * Launch main event loop. This function will keep until "stop" is set to true

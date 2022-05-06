@@ -31,19 +31,19 @@
 
 namespace GAPPP {
 	static struct rte_eth_conf port_conf = {
-			.rxmode = {
-					.mq_mode = RTE_ETH_MQ_RX_NONE,
-					.split_hdr_size = 0,
+		.rxmode = {
+			.mq_mode = RTE_ETH_MQ_RX_NONE,
+			.split_hdr_size = 0,
+		},
+		.txmode = {
+			.mq_mode = RTE_ETH_MQ_TX_NONE,
+		},
+		.rx_adv_conf = {
+			.rss_conf = {
+				.rss_key = nullptr,
+				.rss_hf = 0,
 			},
-			.txmode = {
-					.mq_mode = RTE_ETH_MQ_TX_NONE,
-			},
-			.rx_adv_conf = {
-					.rss_conf = {
-							.rss_key = nullptr,
-							.rss_hf = 0,
-					},
-			},
+		},
 	};
 
 	bool Router::dev_probe(uint16_t port_id, uint16_t n_queue) noexcept {
@@ -174,8 +174,11 @@ namespace GAPPP {
 			struct rte_eth_dev_info eth_info{};
 			struct rte_pktmbuf_extmem &local_external_mem = this->external_mem[port_id];
 			rte_eth_dev_info_get(port_id, &eth_info);
-			rte_dev_dma_unmap(eth_info.device, local_external_mem.buf_ptr, local_external_mem.buf_iova, local_external_mem.buf_len);
-			((GPUDirectHelm*) g)->unregister_ext_mem(local_external_mem);
+			rte_dev_dma_unmap(eth_info.device,
+			                  local_external_mem.buf_ptr,
+			                  local_external_mem.buf_iova,
+			                  local_external_mem.buf_len);
+			((GPUDirectHelm *) g)->unregister_ext_mem(local_external_mem);
 			this->external_mem.erase(port_id);
 			rte_free(local_external_mem.buf_ptr);
 		}
@@ -190,71 +193,72 @@ namespace GAPPP {
 		struct router_thread_ident id;
 	};
 
-	static int router_worker_launch(void *ptr) {
+	static int router_rx_worker_launch(void *ptr) {
 		auto parameters = (router_worker_launch_parameter *) (ptr);
-		parameters->r->port_queue_event_loop(parameters->id, parameters->stop);
+		parameters->r->port_queue_rx_loop(parameters->id, parameters->stop);
+		return 0;
+	}
+
+	static int router_tx_worker_launch(void *ptr) {
+		auto parameters = (router_worker_launch_parameter *) (ptr);
+		parameters->r->port_queue_tx_loop(parameters->id, parameters->stop);
 		return 0;
 	}
 
 	void Router::launch_threads(volatile bool *stop) {
-		static int worker_id_offset = 6;
+		static int worker_id_base = 2;
 		// Spawn workers
 		prctl(PR_SET_NAME, "Router Master");
 		for (auto port: this->ports) {
 			for (uint16_t i = 0; i < port.second; i++) {
 				struct router_worker_launch_parameter param{.r = this, .stop = stop, .id = {port.first, i}};
-				int worker_number = worker_id_offset;
-				worker_id_offset++;
-				rte_eal_remote_launch(router_worker_launch, &param, worker_number);
-				this->workers[param.id] = worker_number;
+				int rx_worker_id = worker_id_base;
+				int tx_worker_id = worker_id_base + 1;
+				worker_id_base += 2;
+				rte_eal_remote_launch(router_rx_worker_launch, &param, rx_worker_id);
+				this->rx_workers[param.id] = rx_worker_id;
+				rte_eal_remote_launch(router_tx_worker_launch, &param, tx_worker_id);
+				this->tx_workers[param.id] = tx_worker_id;
 			}
 		}
 
 		// Wait for workers to exit
-		for (auto worker: this->workers) {
+		for (auto worker: this->rx_workers) {
 			rte_eal_wait_lcore(worker.second);
-			this->workers.erase(worker.first);
+			this->rx_workers.erase(worker.first);
+		}
+		for (auto worker: this->tx_workers) {
+			rte_eal_wait_lcore(worker.second);
+			this->tx_workers.erase(worker.first);
 		}
 	}
 
-	void Router::port_queue_event_loop(struct router_thread_ident ident, volatile bool *stop) {
+	void Router::port_queue_tx_loop(struct router_thread_ident ident, volatile bool *stop) {
 		std::array<struct rte_mbuf *, GAPPP_BURST_MAX_PACKET> tx_burst{};
-		std::array<struct rte_mbuf *, GAPPP_BURST_MAX_PACKET> rx_burst{};
 
 		unsigned int lcore_id;
 		uint64_t prev_tsc, diff_tsc, cur_tsc;
-		int i, nb_rx;
 		unsigned int nb_tx;
 		unsigned int ret;
 		uint8_t portid = ident.port;
 		uint8_t queueid = ident.queue;
 		const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) /
-		                           US_PER_S * GAPPP_BURST_TX_DRAIN_US;
+			US_PER_S * GAPPP_BURST_TX_DRAIN_US;
 
 		prev_tsc = 0;
 		lcore_id = rte_lcore_id();
 
 		// Check if queues are ready
 		if (!this->ring_tx.contains(ident)) {
-			whine(Severity::CRIT, fmt::format("Worker {} - TX queue isn't initialized", ident), GAPPP_LOG_ROUTER);
+			whine(Severity::CRIT, fmt::format("TX Worker {} - TX queue isn't initialized", ident), GAPPP_LOG_ROUTER);
 		}
 
 		whine(Severity::INFO,
-		      fmt::format("Worker {} - Entering main loop @ lcore={}", ident, lcore_id), GAPPP_LOG_ROUTER);
+		      fmt::format("TX Worker {} - Entering main loop @ lcore={}", ident, lcore_id), GAPPP_LOG_ROUTER);
 
-		prctl(PR_SET_NAME, fmt::format("Router Worker {}", ident).c_str());
+		prctl(PR_SET_NAME, fmt::format("Router TX Worker {}", ident).c_str());
 
 		while (!*stop) {
-			/*
-			 * Read packet from RX queues
-			 */
-			nb_rx = rte_eth_rx_burst(portid, queueid, rx_burst.data(),
-			                         GAPPP_BURST_MAX_PACKET);
-			if (nb_rx != 0) {
-				this->g->submit_rx(ident, nb_rx, rx_burst.data());
-				// CPU only implementation at https://github.com/ceph/dpdk/blob/master/examples/l3fwd/l3fwd_lpm_sse.h
-			}
-
 			/*
 			 * TX burst queue drain
 			 */
@@ -269,21 +273,48 @@ namespace GAPPP {
 					ret = rte_eth_tx_burst(portid, queueid, tx_burst.data(), nb_tx);
 					if (unlikely(ret < nb_tx)) {
 						whine(Severity::WARN,
-						      fmt::format("Worker {} submitted {} packets for TX but only {} were sent",
+						      fmt::format("TX Worker {} submitted {} packets for TX but only {} were sent",
 						                  ident,
 						                  nb_tx,
 						                  ret),
 						      GAPPP_LOG_ROUTER);
 						do {
 							rte_pktmbuf_free(tx_burst[ret]);
-						} while (++ret < nb_tx);
+						}
+						while (++ret < nb_tx);
 					}
 				}
 				prev_tsc = cur_tsc;
 			}
 		}
 
-		whine(Severity::INFO, fmt::format("Worker {} - Terminating", ident), GAPPP_LOG_ROUTER);
+		whine(Severity::INFO, fmt::format("TX Worker {} - Terminating", ident), GAPPP_LOG_ROUTER);
+	}
+
+	void Router::port_queue_rx_loop(struct router_thread_ident ident, volatile bool *stop) {
+		std::array<struct rte_mbuf *, GAPPP_BURST_MAX_PACKET> rx_burst{};
+
+		unsigned int lcore_id;
+		int nb_rx;
+		uint8_t portid = ident.port;
+		uint8_t queueid = ident.queue;
+
+		lcore_id = rte_lcore_id();
+
+		whine(Severity::INFO,
+		      fmt::format("RX Worker {} - Entering main loop @ lcore={}", ident, lcore_id), GAPPP_LOG_ROUTER);
+
+		prctl(PR_SET_NAME, fmt::format("Router RX Worker {}", ident).c_str());
+
+		while (!*stop) {
+			nb_rx = rte_eth_rx_burst(portid, queueid, rx_burst.data(),
+			                         GAPPP_BURST_MAX_PACKET);
+			if (nb_rx != 0) {
+				this->g->submit_rx(ident, nb_rx, rx_burst.data());
+			}
+		}
+
+		whine(Severity::INFO, fmt::format("RX Worker {} - Terminating", ident), GAPPP_LOG_ROUTER);
 	}
 
 	void Router::allocate_packet_memory_buffer(unsigned int n_packet, uint16_t port) {
@@ -296,18 +327,25 @@ namespace GAPPP {
 				std::string zone_name = fmt::format("Shared DMA zone/{}", port);
 				struct rte_pktmbuf_extmem local_external_mem{};
 				local_external_mem.elt_size = GAPPP_DIRECT_MBUF_DATAROOM + RTE_PKTMBUF_HEADROOM;
-				local_external_mem.buf_len = RTE_ALIGN_CEIL(n_packet * local_external_mem.elt_size, GAPPP_GPU_PAGE_SIZE);
-				local_external_mem.buf_ptr = rte_malloc(zone_name.c_str(), local_external_mem.buf_len, GAPPP_GPU_PAGE_SIZE);
+				local_external_mem.buf_len =
+					RTE_ALIGN_CEIL(n_packet * local_external_mem.elt_size, GAPPP_GPU_PAGE_SIZE);
+				local_external_mem.buf_ptr =
+					rte_malloc(zone_name.c_str(), local_external_mem.buf_len, GAPPP_GPU_PAGE_SIZE);
 				if (local_external_mem.buf_ptr == nullptr) {
-					whine(Severity::CRIT, fmt::format("External allocation for {} failed", pool_name), GAPPP_LOG_ROUTER);
+					whine(Severity::CRIT,
+					      fmt::format("External allocation for {} failed", pool_name),
+					      GAPPP_LOG_ROUTER);
 				}
 
 				// Register external buffer memory region for GPU DMA
 				rte_eth_dev_info_get(port, &eth_info);
-				((GPUDirectHelm*) g)->register_ext_mem(local_external_mem);
+				((GPUDirectHelm *) g)->register_ext_mem(local_external_mem);
 
 				// Register external buffer memory region for NIC DMA
-				int ret = rte_dev_dma_map(eth_info.device, local_external_mem.buf_ptr, local_external_mem.buf_iova, local_external_mem.buf_len);
+				int ret = rte_dev_dma_map(eth_info.device,
+				                          local_external_mem.buf_ptr,
+				                          local_external_mem.buf_iova,
+				                          local_external_mem.buf_len);
 				if (ret < 0) {
 					whine(Severity::CRIT, "Failed to register DMA zone with NIC", GAPPP_LOG_ROUTER);
 				} else {
@@ -317,9 +355,14 @@ namespace GAPPP {
 				this->external_mem.emplace(port, local_external_mem);
 
 				// Allocate pktmbuf wrapper
-				this->packet_memory_pool[port] = rte_pktmbuf_pool_create_extbuf(pool_name.c_str(), n_packet,
-				                               0, 0, local_external_mem.elt_size,
-				                               GAPPP_DEFAULT_SOCKET_ID, &local_external_mem, 1);
+				this->packet_memory_pool[port] = rte_pktmbuf_pool_create_extbuf(pool_name.c_str(),
+				                                                                n_packet,
+				                                                                0,
+				                                                                0,
+				                                                                local_external_mem.elt_size,
+				                                                                GAPPP_DEFAULT_SOCKET_ID,
+				                                                                &local_external_mem,
+				                                                                1);
 #else
 				whine(Severity::CRIT, "Unreachable code path", GAPPP_LOG_ROUTER);
 #endif
@@ -373,8 +416,8 @@ namespace GAPPP {
 	}
 
 	Router::Router(std::default_random_engine &rng_engine) noexcept
-			:
-			rng_engine(rng_engine) {}
+		:
+		rng_engine(rng_engine) {}
 
 	Router::~Router() noexcept {
 		// Deallocate ring buffers
