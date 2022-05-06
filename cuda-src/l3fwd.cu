@@ -116,15 +116,13 @@ namespace GAPPP {
 
 		int setTable(GAPPP::routing_table t) {
 
-
 			numroutes = t.size();
 			cudaMemcpy(routes, t.data(), sizeof(route) * t.size(), cudaMemcpyHostToDevice);
-
 			readTable<<<1, numroutes>>>();
-
 
 			return 0;
 		}
 
+		int init() { return 0; }
 	}
 }

@@ -11,6 +11,7 @@ namespace GAPPP {
 	namespace l3direct {
 		int invoke(unsigned int nbr_tasks, struct rte_mbuf **packets);
 		int setTable(routing_table t);
+		int init();
 	}
 }
 

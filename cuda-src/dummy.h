@@ -15,6 +15,8 @@ namespace GAPPP::dummy {
 	 * @return
 	 */
 	int invoke(unsigned int nbr_tasks, struct rte_mbuf **packets);
+
+	int init();
 }
 
 #endif //GAPPP_DUMMY_H

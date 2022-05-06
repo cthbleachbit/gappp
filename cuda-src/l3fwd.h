@@ -10,9 +10,7 @@
 
 namespace GAPPP::l3fwd {
 	int invoke(unsigned int nbr_tasks, struct rte_mbuf **packets);
-}
-
-namespace GAPPP::l3fwd {
+	int init();
 	int setTable(routing_table t);
 }
 

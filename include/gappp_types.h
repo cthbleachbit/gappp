@@ -35,7 +35,8 @@ namespace GAPPP {
 		unsigned char *buf;
 	};
 
-	typedef std::function<int(unsigned int, struct rte_mbuf **)> cuda_module_t;
+	typedef std::function<int(unsigned int, struct rte_mbuf **)> cuda_module_invoke_t;
+	typedef std::function<int(void)> cuda_module_init_t;
 }
 
 #endif //GAPPP_TYPES

@@ -9,7 +9,9 @@
 #include "selftest.h"
 
 namespace GAPPP {
-	GPUDirectHelm::GPUDirectHelm(GAPPP::cuda_module_t &module_invoke, const std::string &path_route_table)
+	GPUDirectHelm::GPUDirectHelm(GAPPP::cuda_module_invoke_t &module_invoke,
+	                             GAPPP::cuda_module_init_t &module_init,
+	                             const std::string &path_route_table)
 		: module_invoke(module_invoke) {
 		// Do a GPU quick self test
 		if (GAPPP::selftest::self_test(true) != 0) {
@@ -17,6 +19,10 @@ namespace GAPPP {
 		} else {
 			whine(Severity::INFO, "GPU Self test completed", GAPPP_LOG_GPU_DIRECT_HELM);
 		}
+
+		if (module_init()) {
+			whine(Severity::CRIT, "Module initialization failed", GAPPP_LOG_GPU_HELM);
+		};
 
 		// Transfer routing table into GPU?
 		std::ifstream input_file(path_route_table);

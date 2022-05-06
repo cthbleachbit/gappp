@@ -32,5 +32,7 @@ namespace GAPPP {
 			      GAPPP_LOG_DUMMY);
 			return 0;
 		}
+
+		int init() { return 0; }
 	}
 }

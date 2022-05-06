@@ -421,7 +421,6 @@ namespace GAPPP {
 		rng_engine(rng_engine) {}
 
 	Router::~Router() noexcept {
-		// Deallocate ring buffers
 		for (auto port: this->ports) {
 			dev_stop(port.first);
 		}

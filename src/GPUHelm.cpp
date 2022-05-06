@@ -22,8 +22,10 @@ using std::vector;
 
 
 namespace GAPPP {
-	GPUHelm::GPUHelm(GAPPP::cuda_module_t &module_invoke, const std::string &path_route_table)
-			: module_invoke(module_invoke) {
+	GPUHelm::GPUHelm(GAPPP::cuda_module_invoke_t &module_invoke,
+	                 GAPPP::cuda_module_init_t &module_init,
+	                 const std::string &path_route_table)
+		: module_invoke(module_invoke) {
 		// Do a GPU quick self test
 		if (GAPPP::selftest::self_test(false) != 0) {
 			whine(Severity::CRIT, "GPU Self test failed", GAPPP_LOG_GPU_HELM);
@@ -40,6 +42,10 @@ namespace GAPPP {
 			whine(Severity::CRIT, "Cannot allocate Completion Queue ring buffer", GAPPP_LOG_GPU_HELM);
 		}
 		running.reserve(GAPPP_GPU_FUTURE_PREALLOCATE);
+
+		if (module_init()) {
+			whine(Severity::CRIT, "Module initialization failed", GAPPP_LOG_GPU_HELM);
+		};
 
 		// Transfer routing table into GPU?
 		ifstream input_file(path_route_table);

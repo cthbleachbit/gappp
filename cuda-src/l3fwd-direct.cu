@@ -23,5 +23,10 @@ namespace GAPPP {
 			// STUB
 			return 0;
 		}
+
+		int init() {
+			// TODO: Launch persistent kernels
+			return 0;
+		}
 	}
 }

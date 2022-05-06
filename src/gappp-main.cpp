@@ -14,6 +14,7 @@
 #include "components.h"
 #include "dummy.h"
 #include "l3fwd.h"
+#include "l3fwd-direct.h"
 
 /*
  * Notes: DPDK parameters must be placed before program parameters
@@ -85,7 +86,8 @@ int main(int argc, char **argv) {
 		{nullptr, 0, nullptr, 0},
 	};
 
-	GAPPP::cuda_module_t module = GAPPP::dummy::invoke;
+	GAPPP::cuda_module_invoke_t module_invoke = GAPPP::dummy::invoke;
+	GAPPP::cuda_module_init_t module_init = GAPPP::dummy::init;
 	std::string option_route_table;
 	std::string option_module;
 	std::unordered_map<uint16_t, uint16_t> port_queues{};
@@ -136,19 +138,23 @@ int main(int argc, char **argv) {
 	if (option_route_table.empty()) {
 		GAPPP::whine(GAPPP::Severity::CRIT, "No routing table specified! Use -r <path/to/table>.", "Main");
 	}
+
 	if (option_module == "dummy") {
-		module = GAPPP::dummy::invoke;
+		module_invoke = GAPPP::dummy::invoke;
+		module_init = GAPPP::dummy::init;
 	} else if (option_module == "l3fwd") {
-		module = GAPPP::l3fwd::invoke;
+		module_invoke = use_gpu_direct ? GAPPP::l3direct::invoke : GAPPP::l3fwd::invoke;
+		module_init = use_gpu_direct ? GAPPP::l3direct::init : GAPPP::l3fwd::init;
 	} else {
 		GAPPP::whine(GAPPP::Severity::CRIT, "No module specified! Use -m [l3fwd|dummy].", "Main");
 	}
+
 	// TODO: Create GPU Helm
 #ifdef GAPPP_GPU_DIRECT
 	if (use_gpu_direct) {
-		helm = new GAPPP::GPUDirectHelm(module, option_route_table);
+		helm = new GAPPP::GPUDirectHelm(module_invoke, module_init, option_route_table);
 	} else {
-		helm = new GAPPP::GPUHelm(module, option_route_table);
+		helm = new GAPPP::GPUHelm(module_invoke, module_init, option_route_table);
 	}
 #else
 	helm = new GAPPP::GPUHelm(module, option_route_table);
