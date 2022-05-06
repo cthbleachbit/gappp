@@ -39,6 +39,9 @@ namespace GAPPP {
 		std::cout << print_out << std::flush;
 #endif
 		if (unlikely(sev == Severity::CRIT)) {
+#ifdef GAPPP_SILENT
+			std::string print_out = fmt::format("[{}/{}] {}\n", component, sev_to_string(sev), message);
+#endif
 			throw std::runtime_error(print_out);
 		}
 	}
