@@ -55,6 +55,12 @@ else()
 	set_property(GLOBAL PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
 endif ()
 
+# silence mode
+option(GAPPP_SILENT "Do not print anything - for benchmark only?" OFF)
+if (GAPPP_SILENT)
+	add_compile_definitions(GAPPP_SILENT)
+endif()
+
 # GPU direct
 option(GAPPP_GPU_DIRECT "Build with GPU direct support" ON)
 if (GAPPP_GPU_DIRECT)

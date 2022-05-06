@@ -401,6 +401,7 @@ namespace GAPPP {
 				rte_pktmbuf_free(packets[i]);
 			}
 			whine(Severity::WARN, fmt::format("No TX buffer allocated for {}", id), GAPPP_LOG_ROUTER);
+			return 0;
 		};
 		unsigned int ret = rte_ring_enqueue_burst(tx_ring, reinterpret_cast<void *const *>(packets), len, nullptr);
 		if (ret < len) {

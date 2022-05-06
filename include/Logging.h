@@ -34,8 +34,10 @@ namespace GAPPP {
 	};
 
 	inline void whine(Severity sev, const std::string &message, const std::string &component = "???") {
+#ifndef GAPPP_SILENT
 		std::string print_out = fmt::format("[{}/{}] {}\n", component, sev_to_string(sev), message);
 		std::cout << print_out << std::flush;
+#endif
 		if (unlikely(sev == Severity::CRIT)) {
 			throw std::runtime_error(print_out);
 		}

@@ -94,7 +94,6 @@ namespace GAPPP {
 				struct rte_ipv4_hdr *ip_hdr;
 				ip_hdr = rte_pktmbuf_mtod_offset(packets[i], struct rte_ipv4_hdr *, sizeof(rte_ether_hdr));
 				unsigned int ip_dst = ip_hdr->dst_addr;
-				printf("Post IP addr\n");
 				cudaMemcpy((void *) (gpu_dst_ips + i), &ip_dst, sizeof(unsigned int), cudaMemcpyHostToDevice);
 			}
 			cudaDeviceSynchronize();
