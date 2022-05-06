@@ -35,7 +35,14 @@ namespace GAPPP {
 		unsigned char *buf;
 	};
 
+	/**
+	 * CUDA module invocation routine - called from GPU helm at each trigger
+	 */
 	typedef std::function<int(unsigned int, struct rte_mbuf **)> cuda_module_invoke_t;
+
+	/**
+	 * CUDA module initialization routine - called from GPU helm constructor only once
+	 */
 	typedef std::function<int(void)> cuda_module_init_t;
 }
 
