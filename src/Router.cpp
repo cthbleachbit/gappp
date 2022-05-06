@@ -159,11 +159,11 @@ namespace GAPPP {
 	}
 
 	bool Router::dev_stop(uint16_t port_id) {
+		whine(Severity::INFO, fmt::format("Stopping port {}", port_id), GAPPP_LOG_ROUTER);
 		if (!this->ports.contains(port_id)) {
 			whine(Severity::WARN, fmt::format("Attempting to stop nonexistent port {}", port_id), GAPPP_LOG_ROUTER);
 			return false;
 		}
-		whine(Severity::INFO, fmt::format("Stopping port {}", port_id), GAPPP_LOG_ROUTER);
 		rte_eth_dev_stop(port_id);
 		for (uint16_t i = 0; i < this->ports[port_id]; i++) {
 			rte_ring_free(this->ring_tx[{port_id, i}]);
@@ -185,6 +185,8 @@ namespace GAPPP {
 
 		rte_mempool_free(packet_memory_pool[port_id]);
 		packet_memory_pool[port_id] = nullptr;
+		this->ports.erase(port_id);
+		return true;
 	}
 
 	struct router_worker_launch_parameter {
@@ -206,15 +208,16 @@ namespace GAPPP {
 	}
 
 	void Router::launch_threads(volatile bool *stop) {
-		static int worker_id_base = 2;
+		static unsigned int worker_id_base = 0;
 		// Spawn workers
 		prctl(PR_SET_NAME, "Router Master");
 		for (auto port: this->ports) {
 			for (uint16_t i = 0; i < port.second; i++) {
 				struct router_worker_launch_parameter param{.r = this, .stop = stop, .id = {port.first, i}};
-				int rx_worker_id = worker_id_base;
-				int tx_worker_id = worker_id_base + 1;
-				worker_id_base += 2;
+				worker_id_base = rte_get_next_lcore(worker_id_base, 1, 0);
+				unsigned int rx_worker_id = worker_id_base;
+				worker_id_base = rte_get_next_lcore(worker_id_base, 1, 0);
+				unsigned int tx_worker_id = worker_id_base;
 				rte_eal_remote_launch(router_rx_worker_launch, &param, rx_worker_id);
 				this->rx_workers[param.id] = rx_worker_id;
 				rte_eal_remote_launch(router_tx_worker_launch, &param, tx_worker_id);
@@ -421,8 +424,15 @@ namespace GAPPP {
 		rng_engine(rng_engine) {}
 
 	Router::~Router() noexcept {
+		size_t num_ports = this->ports.size();
+		std::vector<uint16_t> ports_to_stop{};
+		ports_to_stop.reserve(num_ports);
+
 		for (auto port: this->ports) {
-			dev_stop(port.first);
+			ports_to_stop.emplace_back(port.first);
+		}
+		for (auto port: ports_to_stop) {
+			dev_stop(port);
 		}
 	}
 } // GAPPP

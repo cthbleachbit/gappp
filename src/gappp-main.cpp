@@ -185,8 +185,8 @@ int main(int argc, char **argv) {
 	}
 
 	// END
-	delete router;
-	delete helm;
+	// delete router;
+	// delete helm;
 
 	return 0;
 }

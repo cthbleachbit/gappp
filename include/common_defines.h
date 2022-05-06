@@ -22,9 +22,9 @@
 // Burst - batching packet TX
 #define GAPPP_BURST_MAX_PACKET 32
 // Burst - total ring size
-#define GAPPP_BURST_RING_SIZE 1024
+#define GAPPP_BURST_RING_SIZE 4096
 // Burst - drain period in units of microseconds
-#define GAPPP_BURST_TX_DRAIN_US 100
+#define GAPPP_BURST_TX_DRAIN_US 10
 // ???
 #define GAPPP_MEMPOOL_CACHE_SIZE 256
 // Memory pool size
@@ -38,7 +38,7 @@
 
 #define GAPPP_GPU_ID 0
 // Slots to reserve in the ring_tasks buffer
-#define GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT 4096
+#define GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT 65536
 // Number of tasks to dequeue in one shot
 #define GAPPP_GPU_HELM_TASK_BURST 64U
 // Preallocate minion asynchronous results
