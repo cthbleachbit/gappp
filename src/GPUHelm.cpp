@@ -37,10 +37,6 @@ namespace GAPPP {
 		if (ring_tasks == nullptr) {
 			whine(Severity::CRIT, "Cannot allocate Task Queue ring buffer", GAPPP_LOG_GPU_HELM);
 		}
-		ring_completion = rte_ring_create("GPUHelmRingCompletion", GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT, 0, 0);
-		if (ring_completion == nullptr) {
-			whine(Severity::CRIT, "Cannot allocate Completion Queue ring buffer", GAPPP_LOG_GPU_HELM);
-		}
 		running.reserve(GAPPP_GPU_FUTURE_PREALLOCATE);
 
 		if (module_init()) {
@@ -63,8 +59,6 @@ namespace GAPPP {
 	GPUHelm::~GPUHelm() {
 		rte_ring_free(ring_tasks);
 		ring_tasks = nullptr;
-		rte_ring_free(ring_completion);
-		ring_completion = nullptr;
 	}
 
 	unsigned int GPUHelm::submit_rx(router_thread_ident thread_id, router_thread_local_mbuf *task) {
@@ -88,7 +82,6 @@ namespace GAPPP {
 
 	void GPUHelm::gpu_helm_event_loop(const volatile bool *stop) {
 		using namespace std::chrono_literals;
-		auto ring_completion = this->ring_completion;
 
 		prctl(PR_SET_NAME, "GPU Helm");
 		if (!this->ring_tasks || !this->ring_completion) {

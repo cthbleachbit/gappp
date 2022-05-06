@@ -219,9 +219,6 @@ namespace GAPPP {
 		// Incoming buffers - CPU workers will submit_rx tasks to this ring buffer
 		// Note that this buffer is multi-producer/single-consumer.
 		struct rte_ring *ring_tasks = nullptr;
-		// GPU threads will place finished data here
-		// Note tha this buffer is multi-producer(running)/multi-consumer(passed directly to NIC workers)
-		struct rte_ring *ring_completion = nullptr;
 		// Outstanding GPU threads
 		std::vector<std::shared_future<int>> running;
 
