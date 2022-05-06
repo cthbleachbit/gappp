@@ -23,18 +23,6 @@ namespace GAPPP {
 
 	typedef std::vector<struct route> routing_table;
 
-	struct gpu_routing_table {
-		uint16_t num;
-		struct route *routes;
-	};
-
-	struct packet_info {
-		uint16_t incoming_port;
-		uint16_t outgoing_port;
-		uint16_t buf_len;
-		unsigned char *buf;
-	};
-
 	/**
 	 * CUDA module invocation routine - called from GPU helm at each trigger
 	 */
