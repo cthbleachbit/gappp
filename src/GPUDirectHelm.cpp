@@ -1,6 +1,7 @@
 #include <fstream>
 #include <sys/prctl.h>
 #include <rte_gpudev.h>
+#include <cuda_runtime_api.h>
 
 #include "components.h"
 #include "Logging.h"
@@ -30,10 +31,32 @@ namespace GAPPP {
 		int x = GAPPP::l3direct::setTable(routes);
 		whine(Severity::INFO, "Routing table loaded", GAPPP_LOG_GPU_HELM);
 		GAPPP::printTablePrinter(routes, std::cout);
+
+		// Setup gpu communication list
+		for (int i = 0; i < GAPPP_DIRECT_MAX_PERSISTENT_KERNEL; i++) {
+			gpu_comm_lists[i] = rte_gpu_comm_create_list(GAPPP_GPU_ID, GAPPP_GPU_HELM_TASK_BURST);
+			if (gpu_comm_lists[i] == nullptr) {
+				whine(Severity::CRIT, fmt::format("GPU comm list {} allocation failure", i), GAPPP_LOG_GPU_HELM);
+			}
+			cudaError_t cuda_ret = cudaStreamCreateWithFlags(&(gpu_streams[i]), cudaStreamNonBlocking);
+			if (cuda_ret != cudaSuccess) {
+				whine(Severity::CRIT,
+				      fmt::format("GPU stream {} allocation failure: {}", i, cudaGetErrorName(cuda_ret)),
+				      GAPPP_LOG_GPU_HELM);
+			}
+		}
 	}
 
 	GPUDirectHelm::~GPUDirectHelm() {
-
+		for (int i = 0; i < GAPPP_DIRECT_MAX_PERSISTENT_KERNEL; i++) {
+			if (gpu_streams[i] != 0) {
+				cudaStreamDestroy(gpu_streams[i]);
+			}
+			if (gpu_comm_lists[i] != nullptr) {
+				rte_gpu_comm_destroy_list(GAPPP_GPU_ID, GAPPP_GPU_HELM_TASK_BURST);
+				gpu_comm_lists[i] = nullptr;
+			}
+		}
 	}
 
 	unsigned int GPUDirectHelm::submit_rx(router_thread_ident thread_id, size_t len, struct rte_mbuf *const *task) {

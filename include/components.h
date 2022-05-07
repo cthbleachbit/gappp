@@ -14,6 +14,10 @@
 #include <unordered_map>
 #include <memory>
 #include <fmt/format.h>
+#ifdef GAPPP_GPU_DIRECT
+#include <rte_gpudev.h>
+#include <cuda_runtime.h>
+#endif
 #include "gappp_types.h"
 #include "common_defines.h"
 
@@ -71,6 +75,7 @@ namespace GAPPP {
 	private:
 		std::default_random_engine &rng_engine;
 		GPUHelmBase *g = nullptr;
+		bool use_gpu_direct = false;
 		// Only used for GPU direct: External memory zone
 		std::unordered_map<uint16_t, struct rte_pktmbuf_extmem> external_mem{};
 	public:
@@ -139,9 +144,7 @@ namespace GAPPP {
 		 * Assign GPU helm to router - helm will be used to submit RX'd packets
 		 * @param helm
 		 */
-		inline void assign_gpu_helm(GPUHelmBase *helm) noexcept {
-			this->g = helm;
-		}
+		void assign_gpu_helm(GPUHelmBase *helm) noexcept;
 
 	protected:
 		/**
@@ -308,6 +311,11 @@ namespace GAPPP {
 
 		// Entry point to module invocation
 		GAPPP::cuda_module_invoke_t &module_invoke;
+
+		// reference: rte_gpu_comm_list is a list of pointer of tasks - why this instead of pktmbuf?
+		std::array<struct rte_gpu_comm_list *, GAPPP_DIRECT_MAX_PERSISTENT_KERNEL> gpu_comm_lists{};
+
+		std::array<cudaStream_t, GAPPP_DIRECT_MAX_PERSISTENT_KERNEL> gpu_streams{};
 
 	public:
 		/**

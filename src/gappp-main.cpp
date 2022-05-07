@@ -143,8 +143,13 @@ int main(int argc, char **argv) {
 		module_invoke = GAPPP::dummy::invoke;
 		module_init = GAPPP::dummy::init;
 	} else if (option_module == "l3fwd") {
+#ifdef GAPPP_GPU_DIRECT
 		module_invoke = use_gpu_direct ? GAPPP::l3direct::invoke : GAPPP::l3fwd::invoke;
 		module_init = use_gpu_direct ? GAPPP::l3direct::init : GAPPP::l3fwd::init;
+#else
+		module_invoke = GAPPP::l3fwd::invoke;
+		module_init = GAPPP::l3fwd::init;
+#endif
 	} else {
 		GAPPP::whine(GAPPP::Severity::CRIT, "No module specified! Use -m [l3fwd|dummy].", "Main");
 	}
@@ -157,7 +162,7 @@ int main(int argc, char **argv) {
 		helm = new GAPPP::GPUHelm(module_invoke, module_init, option_route_table);
 	}
 #else
-	helm = new GAPPP::GPUHelm(module, option_route_table);
+	helm = new GAPPP::GPUHelm(module_invoke, module_init, option_route_table);
 #endif
 
 	// TODO: Create router instance
@@ -185,8 +190,8 @@ int main(int argc, char **argv) {
 	}
 
 	// END
-	// delete router;
-	// delete helm;
+	delete router;
+	delete helm;
 
 	return 0;
 }

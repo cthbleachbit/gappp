@@ -33,8 +33,10 @@
 #define GAPPP_LOG_ROUTER "Router"
 
 
+
 #define GAPPP_DIRECT_MBUF_DATAROOM 2048
 #define GAPPP_GPU_PAGE_SIZE 4096
+#define GAPPP_DIRECT_MAX_PERSISTENT_KERNEL 16
 
 #define GAPPP_GPU_ID 0
 // Slots to reserve in the ring_tasks buffer

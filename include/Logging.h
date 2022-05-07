@@ -9,6 +9,7 @@
 #include <string>
 #include <fmt/format.h>
 #include <rte_branch_prediction.h>
+#include <rte_debug.h>
 
 namespace GAPPP {
 	enum class Severity {
@@ -42,7 +43,8 @@ namespace GAPPP {
 #ifdef GAPPP_SILENT
 			std::string print_out = fmt::format("[{}/{}] {}\n", component, sev_to_string(sev), message);
 #endif
-			throw std::runtime_error(print_out);
+			std::cout << print_out << std::flush;
+			rte_panic();
 		}
 	}
 }

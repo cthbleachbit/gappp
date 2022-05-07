@@ -170,7 +170,8 @@ namespace GAPPP {
 		}
 
 		whine(Severity::INFO, fmt::format("Releasing memory pool for {}", port_id), GAPPP_LOG_ROUTER);
-		if (g->is_direct()) {
+#ifdef GAPPP_GPU_DIRECT
+		if (use_gpu_direct) {
 			struct rte_eth_dev_info eth_info{};
 			struct rte_pktmbuf_extmem &local_external_mem = this->external_mem[port_id];
 			rte_eth_dev_info_get(port_id, &eth_info);
@@ -182,6 +183,7 @@ namespace GAPPP {
 			this->external_mem.erase(port_id);
 			rte_free(local_external_mem.buf_ptr);
 		}
+#endif
 
 		rte_mempool_free(packet_memory_pool[port_id]);
 		packet_memory_pool[port_id] = nullptr;
@@ -324,7 +326,7 @@ namespace GAPPP {
 		if (this->packet_memory_pool[port] == nullptr) {
 			struct rte_eth_dev_info eth_info{};
 			std::string pool_name = fmt::format("Packet memory pool/{}", port);
-			if (g->is_direct()) {
+			if (use_gpu_direct) {
 #ifdef GAPPP_GPU_DIRECT
 				// Allocate external memory for gpu direct
 				std::string zone_name = fmt::format("Shared DMA zone/{}", port);
@@ -434,5 +436,10 @@ namespace GAPPP {
 		for (auto port: ports_to_stop) {
 			dev_stop(port);
 		}
+	}
+
+	void Router::assign_gpu_helm(GPUHelmBase *helm) noexcept {
+		this->g = helm;
+		use_gpu_direct = helm->is_direct();
 	}
 } // GAPPP

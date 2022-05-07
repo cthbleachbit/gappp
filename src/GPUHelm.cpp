@@ -84,7 +84,7 @@ namespace GAPPP {
 		using namespace std::chrono_literals;
 
 		prctl(PR_SET_NAME, "GPU Helm");
-		if (!this->ring_tasks || !this->ring_completion) {
+		if (!this->ring_tasks) {
 			whine(Severity::CRIT, "GPU Helm ring buffers are not initialized", GAPPP_LOG_GPU_HELM);
 		}
 
