@@ -168,6 +168,7 @@ namespace GAPPP {
 		for (uint16_t i = 0; i < this->ports[port_id]; i++) {
 			rte_ring_free(this->ring_tx[{port_id, i}]);
 		}
+		rte_eth_dev_close(port_id);
 
 		whine(Severity::INFO, fmt::format("Releasing memory pool for {}", port_id), GAPPP_LOG_ROUTER);
 #ifdef GAPPP_GPU_DIRECT
@@ -181,11 +182,12 @@ namespace GAPPP {
 			                  local_external_mem.buf_len);
 			((GPUDirectHelm *) g)->unregister_ext_mem(local_external_mem);
 			this->external_mem.erase(port_id);
-			rte_free(local_external_mem.buf_ptr);
+		} else {
+			rte_mempool_free(packet_memory_pool[port_id]);
 		}
-#endif
-
+#else
 		rte_mempool_free(packet_memory_pool[port_id]);
+#endif
 		packet_memory_pool[port_id] = nullptr;
 		this->ports.erase(port_id);
 		return true;
@@ -396,7 +398,7 @@ namespace GAPPP {
 	unsigned int Router::submit_tx(uint16_t port_id, size_t len, struct rte_mbuf *const *packets) {
 		std::uniform_int_distribution<uint16_t> dist(0, this->ports[port_id] - 1);
 		uint16_t queue = dist(this->rng_engine);
-		struct rte_ring *tx_ring = nullptr;
+		struct rte_ring *tx_ring;
 		struct router_thread_ident id{port_id, queue};
 		try {
 			tx_ring = this->ring_tx.at(id);
@@ -426,16 +428,7 @@ namespace GAPPP {
 		rng_engine(rng_engine) {}
 
 	Router::~Router() noexcept {
-		size_t num_ports = this->ports.size();
-		std::vector<uint16_t> ports_to_stop{};
-		ports_to_stop.reserve(num_ports);
 
-		for (auto port: this->ports) {
-			ports_to_stop.emplace_back(port.first);
-		}
-		for (auto port: ports_to_stop) {
-			dev_stop(port);
-		}
 	}
 
 	void Router::assign_gpu_helm(GPUHelmBase *helm) noexcept {
