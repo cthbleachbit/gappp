@@ -20,15 +20,15 @@
 // Maximum number of cores i.e. threads
 #define GAPPP_MAX_CPU 64
 // Burst - batching packet TX
-#define GAPPP_BURST_MAX_PACKET 32
+#define GAPPP_BURST_MAX_PACKET 512
 // Burst - total ring size
-#define GAPPP_BURST_RING_SIZE 4096
+#define GAPPP_BURST_RING_SIZE 65536
 // Burst - drain period in units of microseconds
 #define GAPPP_BURST_TX_DRAIN_US 10
 // ???
 #define GAPPP_MEMPOOL_CACHE_SIZE 256
 // Memory pool size
-#define GAPPP_MEMPOOL_PACKETS ((1 << 16) - 1)
+#define GAPPP_MEMPOOL_PACKETS ((1 << 17) - 1)
 // Router Logging identifier
 #define GAPPP_LOG_ROUTER "Router"
 
@@ -40,11 +40,11 @@
 
 #define GAPPP_GPU_ID 0
 // Slots to reserve in the ring_tasks buffer
-#define GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT 65536
+#define GAPPP_GPU_HELM_MESSAGE_SLOT_COUNT (65536 * 2)
 // Number of tasks to dequeue in one shot
-#define GAPPP_GPU_HELM_TASK_BURST 64U
+#define GAPPP_GPU_HELM_TASK_BURST (56U * 4)
 // Preallocate minion asynchronous results
-#define GAPPP_GPU_FUTURE_PREALLOCATE 10
+#define GAPPP_GPU_FUTURE_PREALLOCATE 40
 // GPU logging identifier
 #define GAPPP_LOG_GPU_HELM "GPU Helm"
 // GPU logging identifier
