@@ -28,7 +28,6 @@
 namespace GAPPP {
 	namespace l3fwd {
 
-
 		__managed__ int numroutes = 0;
 		__managed__ struct route routes[GAPPP_L3FWD_MAX_ROUTES];
 
@@ -85,12 +84,13 @@ namespace GAPPP {
 
 		int invoke(unsigned int nbr_tasks, struct rte_mbuf **packets) {
 			whine(Severity::INFO, fmt::format("L3FWD kernel invocation with {}", nbr_tasks), "L3FWD");
+			/*
 			unsigned int *gpu_dst_ips;
 			uint16_t *gpu_ports;
 			cudaMalloc(&gpu_dst_ips, nbr_tasks * sizeof(unsigned int));
 			cudaMalloc(&gpu_ports, nbr_tasks * sizeof(uint16_t));
 			for (int i = 0; i < nbr_tasks; i++) {
-				/* Read the lookup key (i.e. ip_dst) from the input packet */
+				// Read the lookup key (i.e. ip_dst) from the input packet
 				struct rte_ipv4_hdr *ip_hdr;
 				ip_hdr = rte_pktmbuf_mtod_offset(packets[i], struct rte_ipv4_hdr *, sizeof(rte_ether_hdr));
 				unsigned int ip_dst = ip_hdr->dst_addr;
@@ -106,6 +106,7 @@ namespace GAPPP {
 			cudaFree(gpu_dst_ips);
 			cudaFree(gpu_ports);
 			return 0;
+			*/
 		}
 
 
@@ -115,11 +116,9 @@ namespace GAPPP {
 		}
 
 		int setTable(GAPPP::routing_table t) {
-
 			numroutes = t.size();
 			cudaMemcpy(routes, t.data(), sizeof(route) * t.size(), cudaMemcpyHostToDevice);
 			readTable<<<1, numroutes>>>();
-
 			return 0;
 		}
 

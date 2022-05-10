@@ -33,6 +33,10 @@ namespace GAPPP {
 			return 0;
 		}
 
+		int invoke_nothing(unsigned int nbr_tasks, struct rte_mbuf **packets) {
+			return 0;
+		}
+
 		int init() { return 0; }
 	}
 }

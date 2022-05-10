@@ -88,7 +88,6 @@ namespace GAPPP {
 			whine(Severity::CRIT, "GPU Helm ring buffers are not initialized", GAPPP_LOG_GPU_HELM);
 		}
 
-		std::array<struct rte_mbuf *, GAPPP_GPU_HELM_TASK_BURST> local_completion{};
 		int nbr_local_tasks = 0;
 
 		// Sanity check the routing table - port must exist

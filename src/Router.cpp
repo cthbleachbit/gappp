@@ -232,12 +232,13 @@ namespace GAPPP {
 		// Wait for workers to exit
 		for (auto worker: this->rx_workers) {
 			rte_eal_wait_lcore(worker.second);
-			this->rx_workers.erase(worker.first);
 		}
 		for (auto worker: this->tx_workers) {
 			rte_eal_wait_lcore(worker.second);
-			this->tx_workers.erase(worker.first);
 		}
+
+		this->tx_workers.clear();
+		this->rx_workers.clear();
 	}
 
 	void Router::port_queue_tx_loop(struct router_thread_ident ident, volatile bool *stop) {
