@@ -1,0 +1,10 @@
+Note: tested with 64K packets, 15 queue per port
+
+buffer-num-pkts-per-port pps
+1<<18                    20000
+1<<17                    20000
+1<<16                    38500
+1<<15                    39000
+1<<14                    38500
+1<<13                    38300
+1<<12                    <crash>

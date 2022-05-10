@@ -12,7 +12,7 @@
 namespace GAPPP {
 	namespace dummy {
 		__global__ void debug_print(unsigned int nbr_tasks, struct rte_mbuf *packets) {
-			printf("\n\n\nGPU/Dummy: Incoming port %u\n\n\n", packets[0].port);
+			// printf("\n\n\nGPU/Dummy: Incoming port %u\n\n\n", packets[0].port);
 		}
 
 		int invoke(unsigned int nbr_tasks, struct rte_mbuf **packets) {

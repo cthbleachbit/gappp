@@ -84,7 +84,6 @@ namespace GAPPP {
 
 		int invoke(unsigned int nbr_tasks, struct rte_mbuf **packets) {
 			whine(Severity::INFO, fmt::format("L3FWD kernel invocation with {}", nbr_tasks), "L3FWD");
-			/*
 			unsigned int *gpu_dst_ips;
 			uint16_t *gpu_ports;
 			cudaMalloc(&gpu_dst_ips, nbr_tasks * sizeof(unsigned int));
@@ -106,7 +105,6 @@ namespace GAPPP {
 			cudaFree(gpu_dst_ips);
 			cudaFree(gpu_ports);
 			return 0;
-			*/
 		}
 
 

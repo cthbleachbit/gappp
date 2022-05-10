@@ -28,7 +28,7 @@
 // ???
 #define GAPPP_MEMPOOL_CACHE_SIZE 256
 // Memory pool size
-#define GAPPP_MEMPOOL_PACKETS ((1 << 17) - 1)
+#define GAPPP_MEMPOOL_PACKETS ((1 << 15) - 1)
 // Router Logging identifier
 #define GAPPP_LOG_ROUTER "Router"
 
