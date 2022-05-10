@@ -1,4 +1,4 @@
-Note: tested with 64K packets, 15 queue per port
+Note: tested with 64K packets, 15 queue per port, gpu burst 56*4
 
 buffer-num-pkts-per-port pps
 1<<18                    20000

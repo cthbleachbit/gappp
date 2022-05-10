@@ -1,0 +1,17 @@
+number-of-queue    pps
+15                 39000 23000????? <- intermittent
+12                 38500
+11                 38700
+10                 21000
+9                  21200
+8                  21200
+7                  21200
+6                  21200
+5                  20400
+4                  20400
+3                  20400
+2                  20400
+1                  25000
+
+Note:
+Note: this means that this thing doesn't scale yet
